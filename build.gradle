@@ -1,5 +1,12 @@
+import jdk.jfr.internal.tool.Main
+
 plugins {
     id 'java'
+    id 'application'
+}
+
+application {
+    mainClass = 'Main'
 }
 
 group 'org.example'
