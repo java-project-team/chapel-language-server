@@ -1,3 +1,5 @@
+package Lexer;
+
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -24,13 +26,11 @@ public class LexerScala implements Lexer {
                     ArrayList<Token> resList = new ArrayList<>();
                     Matcher matcher = pattern.matcher(line);
                     while (matcher.find()) {
-                        Token res = new Token();
-                        res.lineNumber = lineNumber.incrementAndGet();
-                        res.posBegin = matcher.start();
-                        res.posEnd = matcher.end();
-                        res.val = line.substring(matcher.start(), matcher.end());
-                        res.type = type;
-                        resList.add(res);
+                        resList.add(new Token(lineNumber.incrementAndGet(),
+                                matcher.start(),
+                                matcher.end(),
+                                line.substring(matcher.start(), matcher.end()),
+                                type));
                     }
                     return resList.stream();
                 })
