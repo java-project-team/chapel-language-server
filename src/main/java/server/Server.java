@@ -1,8 +1,6 @@
 package server;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 
 import com.google.gson.Gson;
 import protocol.*;
@@ -18,7 +16,7 @@ public class Server {
     private static final Gson gson = new Gson();
     private static final Logger LOG = Logger.getLogger("server");
 
-    void run(InputStream inputStream, OutputStream outputStream) {
+    public void run(InputStream inputStream, OutputStream outputStream) {
         var pending = new ArrayBlockingQueue<Request>(10);
 
         class MessageReader implements Runnable {
@@ -34,7 +32,7 @@ public class Server {
             private boolean kill() {
                 LOG.info("Read stream has been closed, putting kill message onto queue...");
                 try {
-//                    pending.put(endOfStream);
+                    pending.put(new Request());
                     return true;
                 } catch (Exception e) {
                     LOG.log(Level.SEVERE, "Failed to put kill message onto queue, will try again...", e);
@@ -49,9 +47,9 @@ public class Server {
                 while (true) {
                     try {
                         var token = nextToken(inputStream);
-//                        var message = parseMessage(token);
-//                        peek(message);
-//                        pending.put(message);
+                        var request = parseRequest(token);
+                        peek(request);
+                        pending.put(request);
                     } catch (EndOfStreamException __) {
                         if (kill()) return;
                     } catch (Exception e) {
@@ -60,6 +58,20 @@ public class Server {
                 }
             }
         }
+
+        while (true) {
+            try {
+                var token = nextToken(inputStream);
+                var request = parseRequest(token);
+                System.out.println(request.method);
+            } catch (Exception e) {
+                LOG.log(Level.SEVERE, e.getMessage(), e);
+            }
+        }
+    }
+
+    private Request parseRequest(String token) {
+        return gson.fromJson(token, Request.class);
     }
 
     private String nextToken(InputStream inputStream) {
@@ -70,7 +82,7 @@ public class Server {
             contentLength = parseHeader(line);
         } while (contentLength == -1);
 
-        assert readHeader(inputStream).isEmpty();
+        readHeader(inputStream).isEmpty();
 
         LOG.info("Header is parsed");
 
@@ -80,7 +92,9 @@ public class Server {
     private String readContent(InputStream inputStream, int contentLength) {
         try {
             int next;
+
             do {
+
                 next = inputStream.read();
                 if (next == -1) {
                     throw new EndOfStreamException();
@@ -112,13 +126,24 @@ public class Server {
 
     private String readHeader(InputStream inputStream) {
         var resultBuilder = new StringBuilder();
-        var scanner = new Scanner(inputStream);
-        try {
-            String line = scanner.next(".*\r\n");
-            resultBuilder.append(line);
-        } catch (NoSuchElementException e) {
+        var scanner = new BufferedReader(new InputStreamReader(inputStream));
+        // todo Перепиши стрим в буферед ридер и передавай его всюду. Просто стрим передавать надо
+        // если сам читать будешь. А мне ультра впадлу, поэтому надеюсь больше нигде стдином пользоваться не придется
+        // и с буферед стримом норм пойдет
 
+        try {
+//            System.out.println(scanner.next());
+            String line = scanner.readLine();
+            resultBuilder.append(line);
+        } catch (NoSuchElementException | IOException e) {
             throw new EndOfStreamException();
+        }
+        try {
+            inputStream.read();
+            int c = inputStream.read();
+            System.out.println(c);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return resultBuilder.toString();
     }
