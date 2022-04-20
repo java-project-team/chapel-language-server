@@ -18,6 +18,7 @@ public class Server {
 
     public void run(InputStream inputStream, OutputStream outputStream) {
         var pending = new ArrayBlockingQueue<Request>(10);
+        var bufReader = new BufferedReader(new InputStreamReader(inputStream));
 
         class MessageReader implements Runnable {
             void peek(Request request) {
@@ -46,8 +47,14 @@ public class Server {
 
                 while (true) {
                     try {
-                        var token = nextToken(inputStream);
+                        var token = nextToken(bufReader);
                         var request = parseRequest(token);
+                        // todo debug
+                        System.out.println(request.jsonrpc);
+                        System.out.println(request.method);
+                        System.out.println(request.id);
+                        System.out.println(request.params);
+
                         peek(request);
                         pending.put(request);
                     } catch (EndOfStreamException __) {
@@ -58,55 +65,60 @@ public class Server {
                 }
             }
         }
-
-        while (true) {
-            try {
-                var token = nextToken(inputStream);
-                var request = parseRequest(token);
-                System.out.println(request.method);
-            } catch (Exception e) {
-                LOG.log(Level.SEVERE, e.getMessage(), e);
-            }
-        }
+        var thr = new Thread(new MessageReader());
+        thr.start();
+//        while (true) {
+//            try {
+//                var token = nextToken(bufReader);
+//                var request = parseRequest(token);
+////                System.out.println(request);
+//                System.out.println(request.jsonrpc);
+//                System.out.println(request.method);
+//                System.out.println(request.id);
+//                System.out.println(request.params);
+//            } catch (EndOfStreamException e) {
+//                return;
+//            } catch (Exception e) {
+//                LOG.log(Level.SEVERE, e.getMessage(), e);
+//            }
+//        }
     }
 
     private Request parseRequest(String token) {
         return gson.fromJson(token, Request.class);
     }
 
-    private String nextToken(InputStream inputStream) {
+    private String nextToken(BufferedReader bufReader) {
         String line;
         int contentLength;
         do {
-            line = readHeader(inputStream);
+            line = readHeader(bufReader);
             contentLength = parseHeader(line);
         } while (contentLength == -1);
 
-        readHeader(inputStream).isEmpty();
-
         LOG.info("Header is parsed");
 
-        return readContent(inputStream, contentLength);
+        return readContent(bufReader, contentLength);
     }
 
-    private String readContent(InputStream inputStream, int contentLength) {
+    private String readContent(BufferedReader bufReader, int contentLength) {
         try {
             int next;
 
             do {
-
-                next = inputStream.read();
+                next = bufReader.read();
                 if (next == -1) {
                     throw new EndOfStreamException();
                 }
             } while (Character.isWhitespace((char) next));
 
-            byte[] contentB = new byte[contentLength];
-            var count = inputStream.read(contentB);
-            if (count < contentLength) {
+            char[] contentB = new char[contentLength];
+            contentB[0] = (char) next;
+            var count = bufReader.read(contentB, 1, contentLength - 1);
+            if (count < contentLength - 1) {
                 throw new EndOfStreamException();
             }
-            return new String(contentB, StandardCharsets.UTF_8);
+            return new String(contentB);
         } catch (IOException e) {
             throw new EndOfStreamException();
         }
@@ -124,26 +136,19 @@ public class Server {
     static public class EndOfStreamException extends RuntimeException {
     }
 
-    private String readHeader(InputStream inputStream) {
+    private String readHeader(BufferedReader bufReader) {
         var resultBuilder = new StringBuilder();
-        var scanner = new BufferedReader(new InputStreamReader(inputStream));
-        // todo Перепиши стрим в буферед ридер и передавай его всюду. Просто стрим передавать надо
-        // если сам читать будешь. А мне ультра впадлу, поэтому надеюсь больше нигде стдином пользоваться не придется
-        // и с буферед стримом норм пойдет
 
         try {
 //            System.out.println(scanner.next());
-            String line = scanner.readLine();
+            String line = bufReader.readLine();
+//            todo закончился ли инпут
+            if (line == null) {
+                return "";
+            }
             resultBuilder.append(line);
         } catch (NoSuchElementException | IOException e) {
-            throw new EndOfStreamException();
-        }
-        try {
-            inputStream.read();
-            int c = inputStream.read();
-            System.out.println(c);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException();
         }
         return resultBuilder.toString();
     }
