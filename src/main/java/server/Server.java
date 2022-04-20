@@ -44,12 +44,15 @@ public class Server {
             @Override
             public void run() {
                 LOG.info("Placing incoming messages on queue...");
-
                 while (true) {
                     try {
+                        FileWriter f = new FileWriter("/home/rmzs/IdeaProjects/scala-language-server/src/test/requestsFromSubl");
                         var token = nextToken(bufReader);
                         var request = parseRequest(token);
                         // todo debug
+//                        f.write(request.jsonrpc);
+//                        f.write(request.method);
+//                        f.write(request.params.toString());
                         System.out.println(request.jsonrpc);
                         System.out.println(request.method);
                         System.out.println(request.id);
