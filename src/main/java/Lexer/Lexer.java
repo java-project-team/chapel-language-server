@@ -1,25 +1,62 @@
 package Lexer;
 
+import java.util.regex.Pattern;
 import java.util.List;
 
 public interface Lexer {
     enum TypeTokens {
-        NUM,
-        COMMENT,
-        STR
-    } // TODO ещё очев что-то надо, но пока с самим языком не разбиралась
+        MINUS ("-"),
+        PLUS ("\\+"),
+        MUL ("\\*"),
+        DIV ("/"),
+        MOD ("%"),
+        KEY_ARGS ("args"),
+        KEY_VAR ("var"),
+        KEY_VAL ("val"),
+        KEY_LAZY ("lazy"),
+        KEY_DEF ("def"),
+        KEY_OBJECT ("object"),
+        NOT ("!"),
+        LESS ("<"),
+        LEG ("<="),
+        GT (">"),
+        GEQ (">="),
+        EQ ("=="),
+        NEQ ("!="),
+        AND ("&&"),
+        OR ("\\|\\|"),
+        COLON (":"),
+        OPEN_PARENTHESIS ("\\("),
+        CLOSE_PARENTHESIS ("\\)"),
+        OPEN_CURLY_BRACKET ("\\{"),
+        CLOSE_CURLY_BRACKET ("\\}"),
+        OPEN_SQUARE_BRACKET ("\\["),
+        CLOSE_SQUARE_BRACKET ("\\]"),
+        SEMI (";"),
+        COMMA (","),
+        POINT ("\\."),
+        BIT_AND ("&"),
+        BIT_OR ("\\|"),
+        BIT_DOUBLE_ANGLE_BRACKET_RIGHT (">>"),
+        BIT_DOUBLE_ANGLE_BRACKET_LEFT ("<<"),
+        BIT_TRIPLE_ANGLE_BRACKET_RIGHT (">>>"),
+        BIT_WTF ("~"),
+        COMM ("\\\\"),
+        OPEN_COMM ("/\\*"),
+        CLOSE_COMM ("\\*/"),
+        ASSIGN ("="),
+        STRING ("\"[^\"]+\""),
+        INTEGER ("[+-]?\\d+"),
+        REAL ("[+-]?(\\d*)\\.\\d+"),
+        KEY_IF ("if"),
+        KEY_ELSE ("else"),
+        KEY_DO ("do"),
+        NAME_VAR ("[a-zA-Z][a-zA-Z0-9]+");
 
-    class Token {
-        int lineNumber = 0, posBegin = 0, posEnd = 0;
-        String val = "";
-        TypeTokens type;
+        public final Pattern pattern;
 
-        Token(int lineNumber, int posBegin, int posEnd, String val, TypeTokens type) {
-            this.lineNumber = lineNumber;
-            this.posBegin = posBegin;
-            this.posEnd = posEnd;
-            this.val = val;
-            this.type = type;
+        TypeTokens(String regex) {
+            pattern = Pattern.compile("^" + regex);
         }
     }
 

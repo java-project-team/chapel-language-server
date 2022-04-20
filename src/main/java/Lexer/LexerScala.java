@@ -3,28 +3,19 @@ package Lexer;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.*;
 import java.util.stream.*;
 
 public class LexerScala implements Lexer {
-    HashMap<TypeTokens, String> regFromToken;
-
-    LexerScala() {
-        regFromToken = new HashMap<>();
-        regFromToken.put(TypeTokens.STR, "\"[^\"\\\\]+(?:\\\\.[^\"\\\\]*)*\""); // писала в https://regex101.com/, так скопировалось, TODO пока не проверяла
-        regFromToken.put(TypeTokens.COMMENT, "\\\\.*"); // TODO Пока только однострочный
-        regFromToken.put(TypeTokens.NUM, "[+-]?(\\d*\\.\\d+|\\d+\\.\\d*|\\d+)"); // писала в https://regex101.com/, так скопировалось, TODO пока не проверяла
-    }
+    public LexerScala() {}
 
     private Stream<Token> find(Stream<String> stream, TypeTokens type) {
-        Pattern pattern = Pattern.compile(regFromToken.get(type));
         AtomicInteger lineNumber = new AtomicInteger();
         return stream.map(line -> {
                     ArrayList<Token> resList = new ArrayList<>();
-                    Matcher matcher = pattern.matcher(line);
+                    Matcher matcher = type.pattern.matcher(line);
                     while (matcher.find()) {
                         resList.add(new Token(lineNumber.incrementAndGet(),
                                 matcher.start(),
@@ -49,7 +40,7 @@ public class LexerScala implements Lexer {
         }
 
         Stream<Token> res = Stream.of();
-        for (TypeTokens type : regFromToken.keySet()) {
+        for (TypeTokens type : TypeTokens.values()) {
             res = Stream.concat(res, find(stream, type));
         }
 
