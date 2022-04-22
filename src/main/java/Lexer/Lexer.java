@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.*;
 
-public class LexerScala implements Lexer {
+public class Lexer {
     static class Pair {
         int first, second;
 
@@ -20,7 +20,7 @@ public class LexerScala implements Lexer {
     Map<Integer, List<Pair>> checked;
 
     // Токены должны быть отсорчены по приоритету, порядок важен
-    public LexerScala(List<TemplateToken> tokens) {
+    public Lexer(List<TemplateToken> tokens) {
         this.tokens = tokens;
         checked = new HashMap<>();
     }
@@ -54,9 +54,8 @@ public class LexerScala implements Lexer {
         return resList;
     }
 
-    @Override
     public List<Token> ran(String path) {
-        List<String> lines = null;
+        List<String> lines;
         try {
             lines = Files.lines(Paths.get(path)).toList();
         } catch (IOException e) {
@@ -64,7 +63,7 @@ public class LexerScala implements Lexer {
             return null;
         }
 
-        List<Token> res = new ArrayList<Token>();
+        List<Token> res = new ArrayList<>();
         for (TemplateToken type : tokens) {
             res.addAll(find(lines, type));
         }
@@ -86,7 +85,6 @@ public class LexerScala implements Lexer {
         return res;
     }
 
-    @Override
     public void restart() {
         checked = new HashMap<>();
     }

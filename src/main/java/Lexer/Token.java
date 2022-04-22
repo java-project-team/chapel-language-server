@@ -15,7 +15,7 @@ public class Token {
         this.type = type;
     }
 
-    public void print(String path) {
+    public void printFile(String path) {
         try {
             FileWriter writer = new FileWriter(path, true);
             BufferedWriter bufferWriter = new BufferedWriter(writer);
@@ -25,6 +25,9 @@ public class Token {
         catch (IOException e) {
             System.err.print("The res file cannot be opened\n");
         }
-        //System.out.printf("Type = %s, val = %s, line number = %d, pos begin = %d, pos end = %d\n", type, val, lineNumber, posBegin, posEnd);
+    }
+
+    public void print() {
+        System.out.printf("Type = %s, val = %s, line number = %d, pos begin = %d, pos end = %d\n", type, val, lineNumber, posBegin, posEnd);
     }
 }
