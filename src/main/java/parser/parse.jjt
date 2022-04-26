@@ -47,18 +47,18 @@ SKIP :
 
 TOKEN :
 {
+// OPERATORS
   < LCURLYBRACE: "{" >
 | < RCURLYBRACE: "}" >
 | < LSQUAREBRACKET: "[" >
 | < RSQUAREBRACKET: "]" >
 | < LPARENTHESIS: "(" >
 | < RPARENTHESIS: ")" >
-| < SCOPE: "::" >
 | < COLON: ":" >
 | < SEMICOLON: ";" >
 | < COMMA: "," >
+| < POW: "**">
 | < QUESTIONMARK: "?" >
-| < ELLIPSIS: "..." >
 | < ASSIGNEQUAL: "=" >
 | < TIMESEQUAL: "*=" >
 | < DIVIDEEQUAL: "/=" >
@@ -70,6 +70,12 @@ TOKEN :
 | < BITWISEANDEQUAL: "&=" >
 | < BITWISEXOREQUAL: "^=" >
 | < BITWISEOREQUAL: "|=" >
+| < REDUCEEQUAL : "reduce=" >
+| < RANGECOUNT : "#" >
+| < SWAP : "<=>">
+| < IO : "<~>">
+| < ARGS : "..." >
+| < RANGESPEC : "\.\." >
 | < OR: "||" >
 | < AND: "&&" >
 | < BITWISEOR: "|" >
@@ -96,7 +102,7 @@ TOKEN :
 | < POINTERTO: "->" >
 | < DOTSTAR: ".*" >
 | < ARROWSTAR: "->*" >
-
+// KEYWORDS
 | < WILDCARD : "_" >
 | < ALIGN : "align" >
 | < AS : "as" >
