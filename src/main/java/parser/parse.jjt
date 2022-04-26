@@ -1,0 +1,206 @@
+options {
+  LOOKAHEAD = 1;
+  CHOICE_AMBIGUITY_CHECK = 2;
+  OTHER_AMBIGUITY_CHECK = 1;
+  STATIC = true;
+  DEBUG_PARSER = false;
+  DEBUG_LOOKAHEAD = false;
+  DEBUG_TOKEN_MANAGER = false;
+  ERROR_REPORTING = true;
+  JAVA_UNICODE_ESCAPE = false;
+  UNICODE_INPUT = false;
+  IGNORE_CASE = false;
+  USER_TOKEN_MANAGER = false;
+  USER_CHAR_STREAM = false;
+  BUILD_PARSER = true;
+  BUILD_TOKEN_MANAGER = true;
+  SANITY_CHECK = true;
+  FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(Parser)
+
+/**
+ * Simple brace matcher.
+ */
+public class Parser {
+
+  /** Main entry point. */
+  public static void main(String[] args) throws ParseException {
+    Parser parser = new Parser(System.in);
+    parser.Input();
+  }
+
+}
+
+PARSER_END(Parser)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
+}
+
+TOKEN :
+{
+  < LCURLYBRACE: "{" >
+| < RCURLYBRACE: "}" >
+| < LSQUAREBRACKET: "[" >
+| < RSQUAREBRACKET: "]" >
+| < LPARENTHESIS: "(" >
+| < RPARENTHESIS: ")" >
+| < SCOPE: "::" >
+| < COLON: ":" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < QUESTIONMARK: "?" >
+| < ELLIPSIS: "..." >
+| < ASSIGNEQUAL: "=" >
+| < TIMESEQUAL: "*=" >
+| < DIVIDEEQUAL: "/=" >
+| < MODEQUAL: "%=" >
+| < PLUSEQUAL: "+=" >
+| < MINUSEQUAL: "-=" >
+| < SHIFTLEFTEQUAL: "<<=" >
+| < SHIFTRIGHTEQUAL: ">>=" >
+| < BITWISEANDEQUAL: "&=" >
+| < BITWISEXOREQUAL: "^=" >
+| < BITWISEOREQUAL: "|=" >
+| < OR: "||" >
+| < AND: "&&" >
+| < BITWISEOR: "|" >
+| < BITWISEXOR: "^" >
+| < AMPERSAND: "&" >
+| < EQUAL: "==" >
+| < NOTEQUAL: "!=" >
+| < LESSTHAN: "<" >
+| < GREATERTHAN: ">" >
+| < LESSTHANOREQUALTO: "<=" >
+| < GREATERTHANOREQUALTO: ">=" >
+| < SHIFTLEFT: "<<" >
+| < SHIFTRIGHT: ">>" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < STAR: "*" >
+| < DIVIDE: "/" >
+| < MOD: "%" >
+| < PLUSPLUS: "++" >
+| < MINUSMINUS: "--" >
+| < TILDE: "~" >
+| < NOT: "!" >
+| < DOT: "." >
+| < POINTERTO: "->" >
+| < DOTSTAR: ".*" >
+| < ARROWSTAR: "->*" >
+
+| < WILDCARD : "_" >
+| < ALIGN : "align" >
+| < AS : "as" >
+| < ATOMIC : "atomic" >
+| < BEGIN : "begin" >
+| < BOOL : "bool" >
+| < BORROWED : "borrowed" >
+| < BREAK : "break" >
+| < BY : "by" >
+| < BYTES: "bytes" >
+| < CATCH : "catch" >
+| < CLASS : "class" >
+| < COBEGIN : "cobegin" >
+| < COFORALL : "coforall" >
+| < COMPLEX : "complex" >
+| < CONFIG : "config" >
+| < CONST : "const" >
+| < CONTINUE : "continue" >
+| < DEFER: "defer" >
+| < DELETE : "delete" >
+| < DMAPPED : "dmapped" >
+| < DO : "do" >
+| < DOMAIN : "domain" >
+| < ELSE : "else" >
+| < ENUM : "enum" >
+| < EXCEPT : "except" >
+| < EXPORT : "export" >
+| < EXTERN : "extern" >
+| < FAlSETOK : "false" >
+| < FOR : "for" >
+| < FORALL : "forall" >
+| < FOREACH: "foreach" >
+| < FORWARDING : "forwarding" >
+| < IF : "if" >
+| < IMAG : "imag" >
+| < IMPLEMENTS : "implements" >
+| < IN : "in" >
+| < INDEX : "index" >
+| < INLINE : "inline" >
+| < INOUT : "inout" >
+| < INT : "int" >
+| < INTERFACE : "interface" >
+| < ITER : "iter" >
+| < LABEL : "label" >
+| < LET : "let" >
+| < LIFETIME : "lifetime" >
+| < LOCAL : "local" >
+| < LOCALE : "locale" >
+| < MANAGE : "manage" >
+| < MODULE : "module" >
+| < NEW : "new" >
+| < NIL : "nil" >
+| <NOINIT : "noinit" >
+| < ON : "on" >
+| < ONLY : "only" >
+| < OPERATOR : "operator" >
+| < OTHERWISE : "otherwise" >
+| < OUT : "out" >
+| < OVERRIDE : "override" >
+| < OWNED : "owned" >
+| < PARAM : "param" >
+| < PRIVATE : "private" >
+| < PROTOTYPE : "prototype" >
+| < PROC : "proc" >
+| < PUBLIC : "public" >
+| < REAL : "real" >
+| < RECORD : "record" >
+| < REDUCE : "reduce" >
+| < REF : "ref" >
+| < REQUIRE : "require" >
+| < RETURN : "return" >
+| < SCAN : "scan" >
+| < SELECT : "select" >
+| < SERIAL : "serial" >
+| < SHARED : "shared" >
+| < SINGLE : "single" >
+| < SPARSE : "sparse" >
+| < STRING : "string" >
+| < SUBDOMAIN : "subdomain" >
+| < SYNC : "sync" >
+| < THEN : "then" >
+| < THIS : "this" >
+| < THROW : "throw" >
+| < THROWS: "throws" >
+| < TRUE : "true" >
+| < TRY : "try" >
+| < TYPE : "type" >
+| < UNIT : "uint" >
+| < UNION : "union" >
+| < UNMANAGED : "unmanaged" >
+| < USE : "use" >
+| < VAR : "var" >
+| < WHEN : "when" >
+| < WHERE : "where" >
+| < WHILE : "while" >
+| < WITH : "with" >
+| < YIELD : "yield" >
+| < ZIP : "zip" >
+}
+
+
+/** Root production. */
+void Input() :
+{}
+{
+    <EOF>
+}
