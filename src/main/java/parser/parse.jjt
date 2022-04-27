@@ -1,22 +1,3 @@
-options {
-  LOOKAHEAD = 1;
-  CHOICE_AMBIGUITY_CHECK = 2;
-  OTHER_AMBIGUITY_CHECK = 1;
-  STATIC = true;
-  DEBUG_PARSER = false;
-  DEBUG_LOOKAHEAD = false;
-  DEBUG_TOKEN_MANAGER = false;
-  ERROR_REPORTING = true;
-  JAVA_UNICODE_ESCAPE = false;
-  UNICODE_INPUT = false;
-  IGNORE_CASE = false;
-  USER_TOKEN_MANAGER = false;
-  USER_CHAR_STREAM = false;
-  BUILD_PARSER = true;
-  BUILD_TOKEN_MANAGER = true;
-  SANITY_CHECK = true;
-  FORCE_LA_CHECK = false;
-}
 
 PARSER_BEGIN(Parser)
 
@@ -28,7 +9,15 @@ public class Parser {
   /** Main entry point. */
   public static void main(String[] args) throws ParseException {
     Parser parser = new Parser(System.in);
-    parser.Input();
+    try {
+          SimpleNode n = parser.File();
+          n.dump("");
+          System.out.println("Thank you.");
+        } catch (Exception e) {
+          System.out.println("Oops.");
+          System.out.println(e.getMessage());
+          e.printStackTrace();
+        }
   }
 
 }
@@ -44,10 +33,27 @@ SKIP :
 | <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
 | <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
 }
-
+/* LITERALS */
 TOKEN :
 {
+  < INTEGER_LITERAL:
+        <DECIMAL_LITERAL>
+      | <HEX_LITERAL>
+      | <OCTAL_LITERAL>
+      | <BINARY_LITERAL>
+  >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9", "_"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F", "_"])+ >
+|
+  < #OCTAL_LITERAL: "0" ["O", "o"] (["0"-"7", "_"])+ >
+|
+  < #BINARY_LITERAL : "0" ["B", "b"] ("0"| "1" |"_")+ >
+}
 // OPERATORS
+TOKEN :
+{
   < LCURLYBRACE: "{" >
 | < RCURLYBRACE: "}" >
 | < LSQUAREBRACKET: "[" >
@@ -75,7 +81,7 @@ TOKEN :
 | < SWAP : "<=>">
 | < IO : "<~>">
 | < ARGS : "..." >
-| < RANGESPEC : "\.\." >
+| < RANGESPEC : ".." >
 | < OR: "||" >
 | < AND: "&&" >
 | < BITWISEOR: "|" >
@@ -202,11 +208,90 @@ TOKEN :
 | < YIELD : "yield" >
 | < ZIP : "zip" >
 }
-
+/* IDENTIFIERS */
+TOKEN :
+{
+  < ID: <LETTER> (<LETTER>|<DIGIT>|"$")* >
+|
+  < #LETTER: ["_","a"-"z","A"-"Z"] >
+|
+  < #DIGIT: ["0"-"9"] >
+}
 
 /** Root production. */
-void Input() :
+SimpleNode File() :
 {}
 {
-    <EOF>
+    Block() <EOF>
+    {return jjtThis;}
+}
+
+void Block() :
+{}
+{
+    (Declaration() | Expression() | Import())*
+}
+
+void Import() : {} {}
+
+void Declaration() :
+{}
+{
+    ModuleDeclaration()
+    | ProcDeclaration()
+    | ClassDeclaration()
+}
+
+void PrivacySpec() : {}
+{
+    <PRIVATE> | <PUBLIC>
+}
+
+void ModuleDeclaration() :
+{}
+{
+    [PrivacySpec()] [<PROTOTYPE>] <MODULE> <ID> "{" Block() "}"
+}
+
+void Type() :
+{}
+{
+    <INT>
+    | <STRING>
+    | <COMPLEX>
+    | <REAL>
+}
+
+void ProcDeclaration() :
+{}
+{
+    [PrivacySpec()] [ProcKind()] (<PROC> [ProcArgs()] | <OPERATOR> ProcArgs()) <ID> "{" "}"
+}
+
+void Literal() :
+{}
+{
+    <INTEGER_LITERAL>
+}
+
+void ProcArgs() :
+{}
+{
+    "(" (<ID> | Literal())* ")"
+}
+
+void ProcKind() :
+{}
+{
+    <INLINE> | <EXPORT> | <EXTERN> | <OVERRIDE>
+}
+
+void ClassDeclaration() :
+{}
+{}
+
+void Expression() :
+{}
+{
+
 }
