@@ -229,13 +229,289 @@ SimpleNode File() :
 void Block() :
 {}
 {
-    (Declaration() | Expression() | Import() | Statement())*
+    (
+//    Declaration() | Expr() | Import() |
+    Statement())*
 }
 
 void Statement() :
 {}
 {
-    // IF WHILE FOR FORALL mb smthing else
+    BlockStatement()
+    | IfStatement()
+    | Expr() ";"
+    | AssignStatement()
+    |  SwapStatement()
+    |  IoStatement()
+    |  ConditionalStatement()
+    |  SelectStatement()
+    |  WhileDoStatement()
+    |  DoWhileStatement()
+    |  ForStatement()
+    |  LabelStatement()
+    |  BreakStatement()
+    |  ContinueStatement()
+    |  ParamForStatement()
+    |  UseStatement()
+    |  ImportStatement()
+    |  DeferStatement()
+    |  EmptyStatement()
+    |  ReturnStatement()
+    |  YieldStatement()
+    |  ModuleDeclarationStatement()
+    |  ProcedureDeclarationStatement()
+    |  ExternalProcedureDeclarationStatement()
+    |  ExportedProcedureDeclarationStatement()
+    |  IteratorDeclarationStatement()
+    |  MethodDeclarationStatement()
+    |  TypeDeclarationStatement()
+    |  VariableDeclarationStatement()
+    |  RemoteVariableDeclarationStatement()
+    |  OnStatement()
+    |  CobeginStatement()
+    |  CoforallStatement()
+    |  BeginStatement()
+    |  SyncStatement()
+    |  SerialStatement()
+    |  ForallStatement()
+    |  DeleteStatement()
+    |  ManageStatement()
+    // IF WHILE FOR FORALL RETURN mb smthing else
+}
+
+void SwapStatement() :
+{}
+{
+    LValueExpr() <SWAP> LValueExpr()
+}
+
+void IoStatement() :
+{}
+{
+    IOExpr() <IO> Expr() ";"
+}
+
+void IOExpr() :
+{}
+{
+    Expr() | IOExpr()  <IO> Expr()
+}
+
+void SelectStatement() :
+{}
+{
+    <SELECT> Expr() "{"
+    (
+    <WHEN> (Expr())+ (<DO> Statement() | BlockStatement())
+    | <OTHERWISE> (Statement() | <DO> Statement())
+    )
+    "}"
+}
+void CTRLDecl() :
+{}
+{
+     (<VAR> | <CONST>) <ID> <EQUAL> Expr()
+
+}
+void WhileDoStatement() :
+{}
+{
+    <WHILE>
+    (Expr() | CTRLDecl())  (<DO> Statement() | BlockStatement())
+}
+
+void DoWhileStatement() :
+{}
+{
+    <DO> Statement() <WHILE> Expr() ";"
+}
+
+void ForStatement() :
+{}
+{
+    
+}
+void LabelStatement() :
+{}
+{
+
+}
+void BreakStatement() :
+{}
+{
+
+}
+void ContinueStatement() :
+{}
+{
+
+}
+void ParamForStatement() :
+{}
+{
+
+}
+void UseStatement() :
+{}
+{
+
+}
+void ImportStatement() :
+{}
+{
+
+}
+void DeferStatement() :
+{}
+{
+
+}
+void EmptyStatement() :
+{}
+{
+
+}
+void ReturnStatement() :
+{}
+{
+
+}
+void YieldStatement() :
+{}
+{
+
+}
+void ModuleDeclarationStatement() :
+{}
+{
+
+}
+void ProcedureDeclarationStatement() :
+{}
+{
+
+}
+void ExternalProcedureDeclarationStatement() :
+{}
+{
+
+}
+void ExportedProcedureDeclarationStatement() :
+{}
+{
+
+}
+void IteratorDeclarationStatement() :
+{}
+{
+
+}
+void MethodDeclarationStatement() :
+{}
+{
+
+}
+void TypeDeclarationStatement() :
+{}
+{
+
+}
+void VariableDeclarationStatement() :
+{}
+{
+
+}
+void RemoteVariableDeclarationStatement() :
+{}
+{
+
+}
+void OnStatement() :
+{}
+{
+
+}
+void CobeginStatement() :
+{}
+{
+
+}
+void CoforallStatement() :
+{}
+{
+
+}
+void BeginStatement() :
+{}
+{
+
+}
+void SyncStatement() :
+{}
+{
+
+}
+void SerialStatement() :
+{}
+{
+
+}
+void ForallStatement() :
+{}
+{
+
+}
+void DeleteStatement() :
+{}
+{
+
+}
+void ManageStatement() :
+{}
+{
+
+}
+
+void AssignStatement() :
+{}
+{
+    LValueExpr() AssignOperators() Expr() ";"
+}
+
+void LValueExpr() :
+{}{}
+
+void AssignOperators() :
+{}
+{
+    "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "%="
+    | "**="
+    | "&="
+    | "|="
+    | "^="
+    | "&&="
+    | "||="
+    | "<<="
+    | ">>="
+}
+
+void BlockStatement() :
+{}
+{
+    "{" (Statement())* "}"
+}
+
+void IfStatement() :
+{}
+{
+    <IF> (Expr() | CTRLDecl() )
+    (<THEN> Statement() | BlockStatement())
+    [<ELSE> Statement()]
 }
 
 void Import() : {} {}
@@ -271,7 +547,29 @@ void Type() :
 void ProcDeclaration() :
 {}
 {
-    [PrivacySpec()] [ProcKind()] (<PROC> <ID> [ProcArgs()] | <OPERATOR> ProcArgs()) "{" Block() "}"
+    [PrivacySpec()]
+    [ProcKind()]
+    (<PROC> <ID> [ProcArgs()] | <OPERATOR> ProcArgs())
+    [ReturnIntent()]
+    [":" TypeExpr()]
+    [<WHERE> Expr()]
+    "{" Block() "}"
+}
+
+void ReturnIntent() :
+{}
+{
+    <CONST> <REF>
+    | <CONST>
+    | <REF>
+    | <PARAM>
+    | <TYPE>
+}
+
+void TypeExpr() :
+{}
+{
+    //todo
 }
 
 void Operator() :
@@ -330,7 +628,7 @@ void ClassDeclaration() :
 {}
 {}
 
-void Expression() :
+void Expr() :
 {}
 {
 
