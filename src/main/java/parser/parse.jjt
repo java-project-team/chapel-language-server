@@ -329,7 +329,11 @@ void DoWhileStatement() :
 void ForStatement() :
 {}
 {
-    
+    <FOR>
+    (
+    (<ID> | "(" <ID> ("," <ID>)* ")" )
+    | (Expr() | <ZIP> "(" Expr() ("," Expr())* ")")
+    )
 }
 void LabelStatement() :
 {}
