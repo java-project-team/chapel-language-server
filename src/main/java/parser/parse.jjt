@@ -232,7 +232,7 @@ SimpleNode File() :
 void ArrayLiteral() :
 {}
 {
-    ("[" Expr() ("," Expr())* [","] "]")
+    ("[" Expression() ("," Expression())* [","] "]")
     |
     ("[" AssociativeExpr() ("," AssociativeExpr() )* [","] "]")
 }
@@ -240,13 +240,13 @@ void ArrayLiteral() :
 void AssociativeExpr() :
 {}
 {
-    Expr() "=>" Expr()
+    Expression() "=>" Expression()
 }
 
 void RangeLiteral() :
 {}
 {
-    [Expr() ] <RANGESPEC> ["<"] [Expr()]
+    [Expression() ] <RANGESPEC> ["<"] [Expression()]
 }
 
 void Block() :
@@ -262,7 +262,7 @@ void Statement() :
 {
     BlockStatement()
     | IfStatement()
-    | Expr() ";"
+    | Expression() ";"
     | AssignStatement()
     |  SwapStatement()
     |  IoStatement()
@@ -310,21 +310,21 @@ void SwapStatement() :
 void IoStatement() :
 {}
 {
-    IOExpr() <IO> Expr() ";"
+    IOExpr() <IO> Expression() ";"
 }
 
 void IOExpr() :
 {}
 {
-    Expr() | IOExpr()  <IO> Expr()
+    Expression() | IOExpr()  <IO> Expression()
 }
 
 void SelectStatement() :
 {}
 {
-    <SELECT> Expr() "{"
+    <SELECT> Expression() "{"
     (
-    <WHEN> (Expr())+ (<DO> Statement() | BlockStatement())
+    <WHEN> (Expression())+ (<DO> Statement() | BlockStatement())
     | <OTHERWISE> (Statement() | <DO> Statement())
     )
     "}"
@@ -332,20 +332,20 @@ void SelectStatement() :
 void CTRLDecl() :
 {}
 {
-     (<VAR> | <CONST>) <ID> <EQUAL> Expr()
+     (<VAR> | <CONST>) <ID> <EQUAL> Expression()
 
 }
 void WhileDoStatement() :
 {}
 {
     <WHILE>
-    (Expr() | CTRLDecl())  (<DO> Statement() | BlockStatement())
+    (Expression() | CTRLDecl())  (<DO> Statement() | BlockStatement())
 }
 
 void DoWhileStatement() :
 {}
 {
-    <DO> Statement() <WHILE> Expr() ";"
+    <DO> Statement() <WHILE> Expression() ";"
 }
 
 void ForStatement() :
@@ -357,7 +357,7 @@ void ForStatement() :
 void IterableExpr() :
 {}
 {
-    Expr() | <ZIP> "(" Expr() ("," Expr())* ")"
+    Expression() | <ZIP> "(" Expression() ("," Expression())* ")"
 }
 
 void LabelStatement() :
@@ -460,13 +460,13 @@ void EmptyStatement() :
 void ReturnStatement() :
 {}
 {
-    <RETURN> [Expr()] ";"
+    <RETURN> [Expression()] ";"
 }
 
 void YieldStatement() :
 {}
 {
-    <YIELD> Expr() ";"
+    <YIELD> Expression() ";"
 }
 
 void ModuleDeclarationStatement() :
@@ -483,44 +483,251 @@ void ProcedureDeclarationStatement() :
     (<PROC> <ID> [ArgumentList()] | <OPERATOR> ArgumentList())
     [ReturnIntent()]
     [ReturnType() ]
-    [<WHERE> Expr()]
-    (BlockStatement() | ReturnStatement() )
+    [WhereClause() ]
+
 }
 
+void FunctionBody():
+{}
+{
+    BlockStatement() | ReturnStatement()
+}
+
+void WhereClause() : {}
+{
+    <WHERE> Expression()
+}
 void ReturnType() :
 {}
 {
-    ":" TypeExpr()
+    ":" TypeExpression()
 }
 
 void ExternalProcedureDeclarationStatement() :
 {}
 {
-    <EXTERN> [Expr()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType()]
+    <EXTERN> [Expression()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType()]
 }
 
 void ExportedProcedureDeclarationStatement() :
 {}
 {
-    <EXPORT> [Expr()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType() ]
+    <EXPORT> [Expression()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType() ]
 }
 
 void IteratorDeclarationStatement() :
 {}
 {
-
+    [PrivacySpec() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
+    (YieldStatement() | BlockStatement())
 }
 
+void YieldType() :
+{}
+{
+    ":" TypeExpression()
+}
+
+void YieldIntent() :
+{}
+{
+    <CONST> (<REF>)?
+    | <REF>
+    | <PARAM>
+    | <TYPE>
+}
 void MethodDeclarationStatement() :
 {}
 {
-
+    [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [TypeBinding()]
+        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  FunctionBody()
 }
+
+void TypeBinding() : {}
+{
+    <ID> "."
+    | "(" Expression() ")" "."
+}
+
+void ThisIntent() :
+{}
+{
+    <PARAM>
+    |<TYPE>
+    |<REF>
+    |<CONST> (<REF>)?
+}
+
 void TypeDeclarationStatement() :
 {}
 {
-
+    EnumDeclarationStatement()
+    |  ClassDeclarationStatement()
+    |  RecordDeclarationStatement()
+    |  UnionDeclarationStatement()
+    |  TypeAliasDeclarationStatement()
 }
+
+void EnumDeclarationStatement() :
+{}
+{
+  <ENUM> <ID> "{" EnumConstantList() "}"
+}
+
+void EnumConstantList() :
+{}
+{
+  EnumConstant()
+|  EnumConstant() "," [EnumConstantList()]
+}
+
+void EnumConstant():
+{}
+{
+    <ID> [InitPart()]
+}
+
+void InitPart(): {}
+{
+    "=" Expression()
+}
+
+void ClassDeclarationStatement(): {}
+{
+    <CLASS> <ID> [ClassInherit()] "{"[ ClassStatementList()]"}"
+}
+
+void ClassInherit() :
+{}
+{
+    ":" BasicClassType()
+}
+
+void BasicClassType() :
+{}
+{
+    <ID> "(" NamedExpressionList() ")"
+    |<ID>
+}
+
+void  NamedExpressionList() :
+{}
+{
+    NamedExpression() "," NamedExpressionList()
+    |NamedExpression()
+}
+
+void  NamedExpression() :
+{}
+{
+    Expression()
+    |<ID> "=" Expression()
+}
+
+void ClassStatementList() :
+{}
+{
+    ClassStatement() ClassStatementList()
+    |ClassStatement()
+}
+
+void ClassStatement() :
+{}
+{
+    VariableDeclarationStatement()
+    |MethodDeclarationStatement()
+    |TypeDeclarationStatement()
+    |EmptyStatement()
+}
+
+void RecordDeclarationStatement() :
+{}
+{
+    SimpleRecordDeclarationStatement()
+    | ExternalRecordDeclarationStatement()
+}
+
+void ExternalRecordDeclarationStatement() :
+{}
+{
+    <EXTERN> [Expression()] SimpleRecordDeclarationStatement()
+}
+
+void Identifier() :{} {<ID>}
+
+void SimpleRecordDeclarationStatement() :
+{}
+{
+    <RECORD> Identifier() "{" RecordStatementList() "}"
+}
+
+void RecordStatementList() :
+{}
+{
+    RecordStatement()
+    |RecordStatement() RecordStatementList()
+}
+
+void RecordStatement() :
+{}
+{
+    VariableDeclarationStatement()
+    |MethodDeclarationStatement()
+    |TypeDeclarationStatement()
+    |EmptyStatement()
+}
+
+void UnionDeclarationStatement() :
+{}
+{
+    [<EXTERN> ] <UNION> Identifier() "{" UnionStatementList()"}"
+}
+
+void UnionStatementList() :
+{}
+{
+    UnionStatement() UnionStatementList()
+    |UnionStatement()
+}
+
+void UnionStatement() :
+{}
+{
+    TypeDeclarationStatement()
+    |ProcedureDeclarationStatement()
+    |IteratorDeclarationStatement()
+    |VariableDeclarationStatement()
+    |EmptyStatement()
+}
+
+void TypeAliasDeclarationStatement() :
+{}
+{
+    [PrivacySpec()] [<CONFIG>] <TYPE> TypeAliasDeclarationList() ";"
+    | ExternalTypeAliasDeclarationStatement()
+}
+
+void  ExternalTypeAliasDeclarationStatement() :
+{}
+{
+    <EXTERN> [Expression()] <TYPE> TypeAliasDeclarationList()
+}
+
+void TypeAliasDeclarationList() :
+{}
+{
+    TypeAliasDeclaration() "," TypeAliasDeclarationList()
+    |TypeAliasDeclaration()
+}
+
+void TypeAliasDeclaration() :
+{}
+{
+    Identifier()
+    |Identifier() "=" TypeExpression()
+}
+
+
 void VariableDeclarationStatement() :
 {}
 {
@@ -580,7 +787,7 @@ void ManageStatement() :
 void ManagerExpr() :
 {}
 {
-    Expr() [<AS> <ID> [VariableKind()] <ID> ]
+    Expression() [<AS> <ID> [VariableKind()] <ID> ]
 }
 
 void VariableKind() :
@@ -596,7 +803,7 @@ void VariableKind() :
 void AssignStatement() :
 {}
 {
-    LValueExpr() AssignOperators() Expr() ";"
+    LValueExpr() AssignOperators() Expression() ";"
 }
 
 void LValueExpr() :
@@ -630,7 +837,7 @@ void BlockStatement() :
 void IfStatement() :
 {}
 {
-    <IF> (Expr() | CTRLDecl() )
+    <IF> (Expression() | CTRLDecl() )
     (<THEN> Statement() | BlockStatement())
     [<ELSE> Statement()]
 }
@@ -675,7 +882,7 @@ void ReturnIntent() :
     | <TYPE>
 }
 
-void TypeExpr() :
+void TypeExpression() :
 {}
 {
     //todo
@@ -732,7 +939,7 @@ void Operator() :
 void ArgumentList() :
 {}
 {
-    "(" Formal() ("," Formal()) ")"
+    "(" Formal() ("," Formal())* ")"
 }
 
 void TupleGroupedIdentifierList() :
@@ -744,13 +951,13 @@ void TupleGroupedIdentifierList() :
 void FormalType() :
 {}
 {
-    ":" (TypeExpr() | "?" [TypeExpr()])
+    ":" (TypeExpression() | "?" [TypeExpression()])
 }
 
 void VariableArgumentExpr() :
 {}
 {
-    <ARGS> (Expr()  | "?" <ID>)?
+    <ARGS> (Expression()  | "?" <ID>)?
 }
 
 void Formal() :
@@ -759,7 +966,7 @@ void Formal() :
       FormalIntent()
       (<ID> | TupleGroupedIdentifierList())
       [FormalType()]
-      ("=" Expr()  | VariableArgumentExpr() )
+      ("=" Expression()  | VariableArgumentExpr() )
 }
 
 void FormalIntent() :
@@ -784,7 +991,7 @@ void ClassDeclaration() :
 {}
 {}
 
-void Expr() :
+void Expression() :
 {}
 {
 
