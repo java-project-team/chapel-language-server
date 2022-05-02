@@ -73,9 +73,7 @@ TOKEN :
 | < SHIFTLEFTEQUAL: "<<=" >
 | < SHIFTRIGHTEQUAL: ">>=" >
 | < BITWISEANDEQUAL: "&=" >
-| < BITWISEXOREQUAL: "^=" >
 | < BITWISEOREQUAL: "|=" >
-| < BITWISEXOREQUAL: "^=" >
 | < POWEQUAL: "**=">
 | < REDUCEEQUAL : "reduce=" >
 | < RANGECOUNT : "#" >
