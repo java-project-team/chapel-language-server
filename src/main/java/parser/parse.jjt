@@ -63,7 +63,6 @@ TOKEN :
 | < COLON: ":" >
 | < SEMICOLON: ";" >
 | < COMMA: "," >
-| < POW: "**">
 | < QUESTIONMARK: "?" >
 | < ASSIGNEQUAL: "=" >
 | < MULEQUAL: "*=" >
@@ -76,6 +75,8 @@ TOKEN :
 | < BITWISEANDEQUAL: "&=" >
 | < BITWISEXOREQUAL: "^=" >
 | < BITWISEOREQUAL: "|=" >
+| < BITWISEXOREQUAL: "^=" >
+| < POWEQUAL: "**=">
 | < REDUCEEQUAL : "reduce=" >
 | < RANGECOUNT : "#" >
 | < SWAP : "<=>">
@@ -100,6 +101,7 @@ TOKEN :
 | < MUL: "*" >
 | < DIVIDE: "/" >
 | < MOD: "%" >
+| < POW: "**">
 | < PLUSPLUS: "++" >
 | < MINUSMINUS: "--" >
 | < TILDE: "~" >
@@ -207,6 +209,7 @@ TOKEN :
 | < WITH : "with" >
 | < YIELD : "yield" >
 | < ZIP : "zip" >
+| < IMPORT : "import" >
 }
 /* IDENTIFIERS */
 TOKEN :
@@ -226,6 +229,26 @@ SimpleNode File() :
     {return jjtThis;}
 }
 
+void ArrayLiteral() :
+{}
+{
+    ("[" Expr() ("," Expr())* [","] "]")
+    |
+    ("[" AssociativeExpr() ("," AssociativeExpr() )* [","] "]")
+}
+
+void AssociativeExpr() :
+{}
+{
+    Expr() "=>" Expr()
+}
+
+void RangeLiteral() :
+{}
+{
+    [Expr() ] <RANGESPEC> ["<"] [Expr()]
+}
+
 void Block() :
 {}
 {
@@ -243,7 +266,6 @@ void Statement() :
     | AssignStatement()
     |  SwapStatement()
     |  IoStatement()
-    |  ConditionalStatement()
     |  SelectStatement()
     |  WhileDoStatement()
     |  DoWhileStatement()
@@ -329,87 +351,166 @@ void DoWhileStatement() :
 void ForStatement() :
 {}
 {
-    <FOR>
-    (
-    (<ID> | "(" <ID> ("," <ID>)* ")" )
-    | (Expr() | <ZIP> "(" Expr() ("," Expr())* ")")
-    )
+    <FOR> [(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr() (<DO> Statement() | BlockStatement())
 }
+
+void IterableExpr() :
+{}
+{
+    Expr() | <ZIP> "(" Expr() ("," Expr())* ")"
+}
+
 void LabelStatement() :
 {}
 {
-
+    <LABEL> <ID> Statement()
 }
 void BreakStatement() :
 {}
 {
-
+    <BREAK> [<ID>]
 }
 void ContinueStatement() :
 {}
 {
-
+    <CONTINUE> [<ID>]
 }
 void ParamForStatement() :
 {}
 {
-
+    <FOR> <PARAM> <ID> <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] (<DO> Statement() | BlockStatement() )
 }
 void UseStatement() :
 {}
 {
-
+    PrivacySpec() <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
 }
+
+void LimitationClause() :
+{}
+{
+    (<EXCEPT> Exclude() ("," Exclude())* )
+    | (<ONLY> [RenameBase() ("," RenameBase())* ])
+}
+
+void Exclude() :
+{}
+{
+    Operator()
+    | <ID>
+}
+
+void ModuleOrEnumName() :
+{}
+{
+    RenameBase()
+    | <ID> "." ModuleOrEnumName()
+}
+
+void RenameBase() :
+{}
+{
+    (<ID> [<AS> (<ID> | <WILDCARD> ) ])
+    | Operator()
+}
+
 void ImportStatement() :
 {}
 {
-
+    [PrivacySpec()] <IMPORT> ImportExpr() ("," ImportExpr() )*
 }
+
+void ImportExpr() :
+{}
+{
+    ModuleOrSymbolRename()
+    | ModuleOrSymbolBase() UnqualifiedList()
+}
+
+void ModuleOrSymbolBase() :
+{}
+{
+    <ID> ["." ModuleOrSymbolBase()]
+}
+
+void ModuleOrSymbolRename() :
+{}
+{
+    RenameBase()
+    | <ID> "." ModuleOrSymbolRename()
+}
+
+void UnqualifiedList() :
+{}
+{
+      "." "{" RenameBase() ("," RenameBase() )* "}"
+}
+
 void DeferStatement() :
 {}
 {
-
+    <DEFER> Statement()
 }
 void EmptyStatement() :
 {}
 {
-
+    <SEMICOLON>
 }
+
 void ReturnStatement() :
 {}
 {
-
+    <RETURN> [Expr()] ";"
 }
+
 void YieldStatement() :
 {}
 {
-
+    <YIELD> Expr() ";"
 }
+
 void ModuleDeclarationStatement() :
 {}
 {
-
+    PrivacySpec() <PROTOTYPE> <MODULE> <ID> BlockStatement()
 }
+
 void ProcedureDeclarationStatement() :
 {}
 {
-
+    [PrivacySpec()]
+    [ProcKind()]
+    (<PROC> <ID> [ArgumentList()] | <OPERATOR> ArgumentList())
+    [ReturnIntent()]
+    [ReturnType() ]
+    [<WHERE> Expr()]
+    (BlockStatement() | ReturnStatement() )
 }
+
+void ReturnType() :
+{}
+{
+    ":" TypeExpr()
+}
+
 void ExternalProcedureDeclarationStatement() :
 {}
 {
-
+    <EXTERN> [Expr()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType()]
 }
+
 void ExportedProcedureDeclarationStatement() :
 {}
 {
-
+    <EXPORT> [Expr()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType() ]
 }
+
 void IteratorDeclarationStatement() :
 {}
 {
 
 }
+
 void MethodDeclarationStatement() :
 {}
 {
@@ -473,7 +574,23 @@ void DeleteStatement() :
 void ManageStatement() :
 {}
 {
+    <MANAGE> ManagerExpr() ManagerExpr() ("," ManagerExpr())* <DO> Statement() | BlockStatement())
+}
 
+void ManagerExpr() :
+{}
+{
+    Expr() [<AS> <ID> [VariableKind()] <ID> ]
+}
+
+void VariableKind() :
+{}
+{
+    <PARAM>
+    | <CONST>
+    | <VAR>
+    | <REF>
+    | <CONST> <REF>
 }
 
 void AssignStatement() :
@@ -548,18 +665,6 @@ void Type() :
     | <REAL>
 }
 
-void ProcDeclaration() :
-{}
-{
-    [PrivacySpec()]
-    [ProcKind()]
-    (<PROC> <ID> [ProcArgs()] | <OPERATOR> ProcArgs())
-    [ReturnIntent()]
-    [":" TypeExpr()]
-    [<WHERE> Expr()]
-    "{" Block() "}"
-}
-
 void ReturnIntent() :
 {}
 {
@@ -579,47 +684,94 @@ void TypeExpr() :
 void Operator() :
 {}
 {
-    <PLUS>
+//'align' 'by'
+//  + - * / % ** : ! == != <= >= < > << >> & | ^ ~
+    <ALIGN>
+    | <BY>
+    |<PLUS>
     | <MINUS>
     | <MUL>
-    | <MODULE>
     | <DIVIDE>
+    | <MOD>
     | <POW>
-    | <BITWISEOR>
-    | <BITWISEXOR>
-    | <AND>
-    | <BITWISEAND>
     | <COLON>
+    | <NOT>
     | <EQUAL>
-    | <LESSTHAN>
+    | <NOTEQUAL>
     | <LESSTHANOREQUALTO>
-    | <GREATERTHAN>
     | <GREATERTHANOREQUALTO>
-    | "#"
+    | <LESSTHAN>
+    | <GREATERTHAN>
     | <SHIFTLEFT>
     | <SHIFTRIGHT>
-    | <ALIGN>
-    | <BY>
+    | <BITWISEAND>
+    | <BITWISEOR>
+    | <BITWISEXOR>
+    | <TILDE>
+//  = += -= *= /= %= **= &= |= ^= <<= >>= <=> <~> #
     | <ASSIGNEQUAL>
     | <PLUSEQUAL>
     | <MINUSEQUAL>
     | <MULEQUAL>
     | <DIVIDEEQUAL>
     | <MODEQUAL>
+    | <POWEQUAL>
+    | <BITWISEANDEQUAL>
+    | <BITWISEOREQUAL>
+    | <BITWISEXOREQUAL>
+    | <SHIFTLEFTEQUAL>
+    | <SHIFTRIGHTEQUAL>
+    | <SWAP>
+    | <IO>
+    | <AND>
+    | <RANGECOUNT>
     | <MINUSMINUS>
     | <PLUSPLUS>
 }
 
-void Literal() :
+void ArgumentList() :
 {}
 {
-    <INTEGER_LITERAL>
+    "(" Formal() ("," Formal()) ")"
 }
 
-void ProcArgs() :
+void TupleGroupedIdentifierList() :
 {}
 {
-    "(" (<ID> | Literal())* ")"
+    "(" <ID> ("," <ID>)* ")"
+}
+
+void FormalType() :
+{}
+{
+    ":" (TypeExpr() | "?" [TypeExpr()])
+}
+
+void VariableArgumentExpr() :
+{}
+{
+    <ARGS> (Expr()  | "?" <ID>)?
+}
+
+void Formal() :
+{}
+{
+      FormalIntent()
+      (<ID> | TupleGroupedIdentifierList())
+      [FormalType()]
+      ("=" Expr()  | VariableArgumentExpr() )
+}
+
+void FormalIntent() :
+{}
+{
+    <CONST> (<IN> | <REF>)?
+    | <IN>
+    | <OUT>
+    | <INOUT>
+    | <REF>
+    | <PARAM>
+    | <TYPE>
 }
 
 void ProcKind() :
