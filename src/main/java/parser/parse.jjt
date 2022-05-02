@@ -207,6 +207,11 @@ TOKEN :
 | < WITH : "with" >
 | < YIELD : "yield" >
 | < ZIP : "zip" >
+| < MINMAX : "minmax">
+| < MINLOC : "minloc">
+| < MAXLOC : "maxloc">
+| < MIN : "min">
+| < MAX : "max">
 | < IMPORT : "import" >
 }
 /* IDENTIFIERS */
@@ -302,7 +307,7 @@ void Statement() :
 void SwapStatement() :
 {}
 {
-    LValueExpr() <SWAP> LValueExpr()
+    LvalueExpression() <SWAP> LvalueExpression()
 }
 
 void IoStatement() :
@@ -381,7 +386,7 @@ void ParamForStatement() :
 void UseStatement() :
 {}
 {
-    PrivacySpec() <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
+    PrivacySpecifier() <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
 }
 
 void LimitationClause() :
@@ -415,7 +420,7 @@ void RenameBase() :
 void ImportStatement() :
 {}
 {
-    [PrivacySpec()] <IMPORT> ImportExpr() ("," ImportExpr() )*
+    [PrivacySpecifier()] <IMPORT> ImportExpr() ("," ImportExpr() )*
 }
 
 void ImportExpr() :
@@ -470,13 +475,13 @@ void YieldStatement() :
 void ModuleDeclarationStatement() :
 {}
 {
-    PrivacySpec() <PROTOTYPE> <MODULE> <ID> BlockStatement()
+    PrivacySpecifier() <PROTOTYPE> <MODULE> <ID> BlockStatement()
 }
 
 void ProcedureDeclarationStatement() :
 {}
 {
-    [PrivacySpec()]
+    [PrivacySpecifier()]
     [ProcKind()]
     (<PROC> <ID> [ArgumentList()] | <OPERATOR> ArgumentList())
     [ReturnIntent()]
@@ -516,7 +521,7 @@ void ExportedProcedureDeclarationStatement() :
 void IteratorDeclarationStatement() :
 {}
 {
-    [PrivacySpec() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
+    [PrivacySpecifier() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
     (YieldStatement() | BlockStatement())
 }
 
@@ -701,7 +706,7 @@ void UnionStatement() :
 void TypeAliasDeclarationStatement() :
 {}
 {
-    [PrivacySpec()] [<CONFIG>] <TYPE> TypeAliasDeclarationList() ";"
+    [PrivacySpecifier()] [<CONFIG>] <TYPE> TypeAliasDeclarationList() ";"
     | ExternalTypeAliasDeclarationStatement()
 }
 
@@ -725,87 +730,327 @@ void TypeAliasDeclaration() :
     |Identifier() "=" TypeExpression()
 }
 
-
 void VariableDeclarationStatement() :
 {}
 {
-
-}
-void RemoteVariableDeclarationStatement() :
-{}
-{
-
-}
-void OnStatement() :
-{}
-{
-
-}
-void CobeginStatement() :
-{}
-{
-
-}
-void CoforallStatement() :
-{}
-{
-
-}
-void BeginStatement() :
-{}
-{
-
-}
-void SyncStatement() :
-{}
-{
-
-}
-void SerialStatement() :
-{}
-{
-
-}
-void ForallStatement() :
-{}
-{
-
-}
-void DeleteStatement() :
-{}
-{
-
-}
-void ManageStatement() :
-{}
-{
-    <MANAGE> ManagerExpr() ManagerExpr() ("," ManagerExpr())* <DO> Statement() | BlockStatement())
+    [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind() VariableDeclarationList() ";"
 }
 
-void ManagerExpr() :
+void ConfigExternOrExport():
 {}
 {
-    Expression() [<AS> <ID> [VariableKind()] <ID> ]
+    <CONFIG>
+    |<EXTERN>
+    |<EXPORT>
 }
 
 void VariableKind() :
 {}
 {
-    <PARAM>
-    | <CONST>
-    | <VAR>
-    | <REF>
-    | <CONST> <REF>
+<PARAM>
+|<CONST> [<REF>]
+|<VAR>
+|<REF>
+}
+
+void VariableDeclarationList() :
+{}
+{
+    VariableDeclaration() "," VariableDeclarationList()
+    |VariableDeclaration()
+}
+
+void VariableDeclaration() :
+{}
+{
+    IdentifierList() [TypePart()] [InitializationPart()]
+}
+
+void TypePart() :
+{}
+{
+ ":" TypeExpression()
+}
+
+void InitializationPart() :
+{}
+{
+ "=" Expression()
+}
+
+void IdentifierList() :
+{}
+{
+    Identifier() "," IdentifierList()
+    |Identifier()
+    |TupleGroupedIdentifierList() "," IdentifierList()
+    |TupleGroupedIdentifierList()
+}
+
+void TupleGroupedIdentifierList() :
+{}
+{
+    "(" IdentifierList() ")"
+}
+
+void RemoteVariableDeclarationStatement() :
+{}
+{
+    <ON> Expression() VariableDeclarationStatement()
+}
+
+void OnStatement() :
+{}
+{
+    <ON> Expression() <DO> Statement()
+    |<ON> Expression() BlockStatement()
+}
+
+void CobeginStatement() :
+{}
+{
+    <COBEGIN> [TaskIntentClause()] BlockStatement()
+}
+
+
+void  TaskIntentClause() :
+{}
+{
+    <WITH> "(" TaskIntentList() ")"
+}
+
+void  TaskIntentItem() :
+{}
+{
+FormalIntent() Identifier()
+|ReduceScanOperator() <REDUCE> Identifier()
+|ClassType() <REDUCE> Identifier()
+|TaskPrivateVarDecl()
+}
+
+void ClassType() :
+{}
+{
+    BasicClassType()
+    |<OWNED> BasicClassType()
+    |<SHARED> BasicClassType()
+    |<BORROWED> BasicClassType()
+    |<UNMANAGED> BasicClassType()
+}
+
+void  ReduceScanOperator() :
+{}
+{
+"+"
+|"*"
+|"&&"
+|"||"
+|"&"
+|"|"
+|"^"
+|<MINMAX>
+|<MINLOC>
+|<MAXLOC>
+|<MIN>
+|<MAX>
+}
+
+void  TaskIntentList() :
+{}
+{
+    TaskIntentItem() "," TaskIntentList()
+    |TaskIntentItem()
+}
+
+void  TaskPrivateVarDecl() :
+{}
+{
+    TaskPrivateVarKind() Identifier() [TypePart()] [InitializationPart()]
+}
+
+void  TaskPrivateVarKind() :
+{}
+{
+<CONST>
+|<VAR>
+|<REF>
+}
+
+void CoforallStatement() :
+{}
+{
+ <COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] <DO> Statement()
+|<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] BlockStatement()
+|<COFORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+|<COFORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+}
+
+void  IteratableExpression() :
+{}
+{
+    Expression()
+    |<ZIP> "(" ExpressionList() ")"
+}
+
+void  ExpressionList() :
+{}
+{
+    Expression() "," ExpressionList()
+    |Expression()
+}
+
+void  IndexVarDeclaration() :
+{}
+{
+Identifier()
+|TupleGroupedIdentifierList()
+}
+
+void  BeginStatement() :
+{}
+{
+    <BEGIN> [TaskIntentClause()] Statement()
+}
+
+void  SyncStatement() :
+{}
+{
+ <SYNC> Statement()
+|<SYNC> BlockStatement()
+}
+
+void  SyncType() :
+{}
+{
+ <SYNC> TypeExpression()
+}
+
+void  SerialStatement() :
+{}
+{
+ <SERIAL> [Expression()] <DO> Statement()
+|<SERIAL> [Expression()] BlockStatement()
+}
+
+void  AtomicType() :
+{}
+{
+    <ATOMIC> TypeExpression()
+}
+
+void  SingleType() :
+{}
+{
+    <SINGLE> TypeExpression()
+}
+
+void  ForallStatement() :
+{}
+{
+  <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+| <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
+| <FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+| <FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+| "[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
+| "[" IteratableExpression() [TaskIntentClause()] "]" Statement()
+}
+
+void  DeleteStatement() :
+{}
+{
+ <DELETE> ExpressionList() ";"
+}
+
+void ManageStatement() :
+{}
+{
+    <MANAGE> ManagerExpressionList() <DO> Statement()
+    |<MANAGE> ManagerExpressionList() BlockStatement()
+}
+
+void ManagerExpression() :
+{}
+{
+Expression() <AS> VariableKind() Identifier()
+|Expression() <AS> Identifier()
+|Expression()
+}
+
+void ManagerExpressionList() :
+{}
+{
+    ManagerExpression()
+    | ManagerExpressionList() ","  ManagerExpression()
 }
 
 void AssignStatement() :
 {}
 {
-    LValueExpr() AssignOperators() Expression() ";"
+    LvalueExpression() AssignOperators() Expression() ";"
 }
 
-void LValueExpr() :
-{}{}
+void  LvalueExpression() :
+{}
+{
+    VariableExpression()
+    |MemberAccessExpression()
+    |ParenthesizedExpression()
+    | ParentheseslessFunctionIdentifier()
+    | CallExpression()
+}
+
+void  ParenthesizedExpression() :
+{}
+{
+    "(" Expression() ")"
+}
+
+void  CallExpression() :
+{}
+{
+ParentheseslessFunctionIdentifier()
+|LvalueExpression()"[" NamedExpressionList()"]"
+|LvalueExpression()"(" NamedExpressionList()")"
+}
+
+void  MemberAccessExpression() :
+{}
+{
+    FieldAccessExpression()
+    |MethodCallExpression()
+}
+
+void  MethodCallExpression() :
+{}
+{
+[ReceiverClause()] Expression()"(" NamedExpressionList() ")"
+|[ReceiverClause()] Expression()"[" NamedExpressionList() "]"
+|[ReceiverClause()] ParentheseslessFunctionIdentifier()
+}
+
+void  ParentheseslessFunctionIdentifier() :
+{}
+{
+    Identifier()
+}
+
+void  ReceiverClause() :
+{}
+{
+    Expression() "."
+}
+
+void  FieldAccessExpression() :
+{}
+{
+    [ReceiverClause()] Identifier()
+}
+
+void  VariableExpression() :
+{}
+{
+    Identifier()
+}
 
 void AssignOperators() :
 {}
@@ -850,7 +1095,7 @@ void Declaration() :
     | ClassDeclaration()
 }
 
-void PrivacySpec() : {}
+void PrivacySpecifier() : {}
 {
     <PRIVATE> | <PUBLIC>
 }
@@ -858,7 +1103,7 @@ void PrivacySpec() : {}
 void ModuleDeclaration() :
 {}
 {
-    [PrivacySpec()] [<PROTOTYPE>] <MODULE> <ID> "{" Block() "}"
+    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> "{" Block() "}"
 }
 
 void Type() :
@@ -938,12 +1183,6 @@ void ArgumentList() :
 {}
 {
     "(" Formal() ("," Formal())* ")"
-}
-
-void TupleGroupedIdentifierList() :
-{}
-{
-    "(" <ID> ("," <ID>)* ")"
 }
 
 void FormalType() :
