@@ -247,9 +247,9 @@ SimpleNode File() :
 void ArrayLiteral() :
 {}
 {
-    ("[" Expression() ("," Expression())* [","] "]")
+    LOOKAHEAD(3)("[" Expression() ("," Expression())* "]")
     |
-    ("[" AssociativeExpr() ("," AssociativeExpr() )* [","] "]")
+    LOOKAHEAD(3)("[" AssociativeExpr() ("," AssociativeExpr() )* "]")
 }
 
 void AssociativeExpr() :
@@ -261,15 +261,25 @@ void AssociativeExpr() :
 void RangeLiteral() :
 {}
 {
-    [Expression() ] <RANGESPEC> ["<"] [Expression()]
+    [Expression() ] <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
 }
 
 void Block() :
 {}
 {
     (
-//    Declaration() | Expr() | Import() |
     Statement())*
+}
+
+void  ExpressionStatement() :
+{}
+{
+NewExpression() ";"
+|LetExpression() ";"
+|LvalueExpression() ";"
+|CallExpression() ";"
+|MemberAccessExpression() ";"
+|VariableExpression() ";"
 }
 
 void Statement() :
@@ -277,7 +287,7 @@ void Statement() :
 {
     BlockStatement()
     | IfStatement()
-    | Expression() ";"
+    | ExpressionStatement()
     | AssignStatement()
     |  SwapStatement()
     |  IoStatement()
@@ -313,7 +323,6 @@ void Statement() :
     |  ForallStatement()
     |  DeleteStatement()
     |  ManageStatement()
-    // IF WHILE FOR FORALL RETURN mb smthing else
 }
 
 void SwapStatement() :
@@ -331,7 +340,7 @@ void IoStatement() :
 void IOExpr() :
 {}
 {
-    Expression() | IOExpr()  <IO> Expression()
+    Expression() //| IOExpr()  <IO> Expression()
 }
 
 void SelectStatement() :
@@ -992,7 +1001,7 @@ void ManagerExpressionList() :
 {}
 {
     ManagerExpression()
-    | ManagerExpressionList() ","  ManagerExpression()
+//    | ManagerExpressionList() ","  ManagerExpression()
 }
 
 void AssignStatement() :
@@ -1007,8 +1016,8 @@ void  LvalueExpression() :
     VariableExpression()
     |MemberAccessExpression()
     |ParenthesizedExpression()
-    | ParentheseslessFunctionIdentifier()
-    | CallExpression()
+    | Identifier()
+//    | CallExpression()
 }
 
 void  ParenthesizedExpression() :
@@ -1020,8 +1029,7 @@ void  ParenthesizedExpression() :
 void  CallExpression() :
 {}
 {
-ParentheseslessFunctionIdentifier()
-|LvalueExpression()"[" NamedExpressionList()"]"
+ LvalueExpression()"[" NamedExpressionList()"]"
 |LvalueExpression()"(" NamedExpressionList()")"
 }
 
@@ -1035,15 +1043,9 @@ void  MemberAccessExpression() :
 void  MethodCallExpression() :
 {}
 {
-[ReceiverClause()] Expression()"(" NamedExpressionList() ")"
-|[ReceiverClause()] Expression()"[" NamedExpressionList() "]"
-|[ReceiverClause()] ParentheseslessFunctionIdentifier()
-}
-
-void  ParentheseslessFunctionIdentifier() :
-{}
-{
-    Identifier()
+ReceiverClause() Expression()"(" NamedExpressionList() ")"
+|ReceiverClause() Expression()"[" NamedExpressionList() "]"
+|ReceiverClause() Identifier()
 }
 
 void  ReceiverClause() :
@@ -1055,7 +1057,7 @@ void  ReceiverClause() :
 void  FieldAccessExpression() :
 {}
 {
-    [ReceiverClause()] Identifier()
+    ReceiverClause() Identifier()
 }
 
 void  VariableExpression() :
@@ -1344,18 +1346,18 @@ void Expression() :
 {
 VariableExpression()
 |EnumConstantExpression()
-|CallExpression()
-|TypeExpression()
-|IteratableCallExpression()
+//|CallExpression()
+//|TypeExpression()
+//|IteratableCallExpression()
 |NewExpression()
 |QueryExpression()
-|LvalueExpression()
-|CastExpression()
-|LiteralExpression()
-|MemberAccessExpression()
+//|LvalueExpression()
+//|CastExpression()
+//|LiteralExpression()
+//|MemberAccessExpression()
 |ParenthesizedExpression()
 |UnaryExpression()
-|BinaryExpression()
+//|BinaryExpression()
 |LetExpression()
 |IfExpression()
 |ForExpression()
@@ -1365,8 +1367,8 @@ VariableExpression()
 |ModuleAccessExpression()
 |TupleExpression()
 |TupleExpandExpression()
-|LocaleQueryExpression()
-|TypeQueryExpression()
+//|LocaleQueryExpression()
+//|TypeQueryExpression()
 |MappedDomainExpression()
 }
 
@@ -1391,21 +1393,15 @@ void  DmapValue() :
 void  DomainExpression() :
 {}
 {
-DomainLiteral()
+(DomainLiteral()
 |DomainName()
-|DomainAssignmentExpression()
-| (DomainLiteral()
-   |DomainName()
-   |DomainAssignmentExpression()) <ALIGN> Expression()
-|DomainAlignmentExpression()
-|DomainStridingExpression()
-|DomainSliceExpression()
+|DomainAssignmentExpression()) (DomainAlignmentExpression() | DomainStridingExpression() | DomainSliceExpression())
 }
 
 void  DomainAlignmentExpression() :
 {}
 {
- DomainExpression() <ALIGN> Expression()
+ <ALIGN> Expression() DomainAlignmentExpression()
 }
 
 void  DomainAssignmentExpression() :
@@ -1423,8 +1419,7 @@ void  DomainName() :
 void  DomainSliceExpression() :
 {}
 {
- DomainExpression()"[" SlicingIndexSet() "]"
-|DomainExpression()"(" SlicingIndexSet() ")"
+ ("[" SlicingIndexSet() "]" | "(" SlicingIndexSet() ")") DomainSliceExpression()
 }
 
 void  SlicingIndexSet() :
@@ -1437,7 +1432,7 @@ void  SlicingIndexSet() :
 void  DomainStridingExpression() :
 {}
 {
- DomainExpression() <BY> Expression()
+ <BY> Expression() DomainStridingExpression()
 }
 
 void  DomainType() :
@@ -1677,12 +1672,12 @@ void  IntegerLiteral() :
 
 TOKEN : {
   <REAL_LITERAL :
-    ((<INTEGER_LITERAL>)? "\."  (<EXPONENT_PART>)?)
-    | <INTEGER_LITERAL> ("\.")? <EXPONENT_PART>
-    | (<HEX_LITERAL> )? "\." <HEX_LITERAL> (<PEXPONENT_PART>)?
-    | (<HEX_LITERAL> )? "\." <HEX_LITERAL>  (<PEXPONENT_PART>)?
-    |  <HEX_LITERAL> ("\.")? <PEXPONENT_PART>
-    |  <HEX_LITERAL> ("\.")? <PEXPONENT_PART>
+    ((<INTEGER_LITERAL>)? "."  (<EXPONENT_PART>)?)
+    | <INTEGER_LITERAL> (".")? <EXPONENT_PART>
+    | (<HEX_LITERAL> )? "." <HEX_LITERAL> (<PEXPONENT_PART>)?
+    | (<HEX_LITERAL> )? "." <HEX_LITERAL>  (<PEXPONENT_PART>)?
+    |  <HEX_LITERAL> (".")? <PEXPONENT_PART>
+    |  <HEX_LITERAL> (".")? <PEXPONENT_PART>
     >
 | <IMAGINARY_LITERAL :
        <INTEGER_LITERAL> "i"
@@ -1705,10 +1700,10 @@ void  RangeExpression() :
 {}
 {
     Expression()
-    |StridedRangeExpression()
-    |CountedRangeExpression()
-    |AlignedRangeExpression()
-    |SlicedRangeExpression()
+//    |StridedRangeExpression()
+//    |CountedRangeExpression()
+//    |AlignedRangeExpression()
+//    |SlicedRangeExpression()
 }
 
 void  SlicedRangeExpression() :
