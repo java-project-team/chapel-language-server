@@ -274,12 +274,12 @@ void Block() :
 void  ExpressionStatement() :
 {}
 {
-NewExpression() ";"
-|LetExpression() ";"
+LetExpression() ";"
+|NewExpression() ";"
 |LvalueExpression() ";"
 |CallExpression() ";"
 |MemberAccessExpression() ";"
-|VariableExpression() ";"
+|Identifier() ";"
 }
 
 void Statement() :
@@ -1013,10 +1013,9 @@ void AssignStatement() :
 void  LvalueExpression() :
 {}
 {
-    VariableExpression()
+    Identifier()
     |MemberAccessExpression()
     |ParenthesizedExpression()
-    | Identifier()
 //    | CallExpression()
 }
 
@@ -1060,11 +1059,6 @@ void  FieldAccessExpression() :
     ReceiverClause() Identifier()
 }
 
-void  VariableExpression() :
-{}
-{
-    Identifier()
-}
 
 void AssignOperators() :
 {}
@@ -1126,7 +1120,7 @@ void  TypeExpression() :
 {}
 {
  PrimitiveType()
-|EnumType()
+|Identifier()
 |StructuredType()
 |DataparallelType()
 |SynchronizationType()
@@ -1183,7 +1177,7 @@ void  StructuredType() :
 {
  ClassType()
 | RecordType()
-| UnionType()
+| Identifier()
 | TupleType()
 }
 
@@ -1206,12 +1200,6 @@ void  TypeList() :
 {
  TypeExpression()
 |TypeExpression()"," TypeList()
-}
-
-void  UnionType() :
-{}
-{
- Identifier()
 }
 
 void  PrimitiveTypeParameterPart() :
@@ -1344,7 +1332,7 @@ void ProcKind() :
 void Expression() :
 {}
 {
-VariableExpression()
+Identifier()
 |EnumConstantExpression()
 //|CallExpression()
 //|TypeExpression()
@@ -1394,7 +1382,7 @@ void  DomainExpression() :
 {}
 {
 (DomainLiteral()
-|DomainName()
+|Identifier()
 |DomainAssignmentExpression()) (DomainAlignmentExpression() | DomainStridingExpression() | DomainSliceExpression())
 }
 
@@ -1407,13 +1395,7 @@ void  DomainAlignmentExpression() :
 void  DomainAssignmentExpression() :
 {}
 {
- DomainName() "=" DomainExpression()
-}
-
-void  DomainName() :
-{}
-{
- Identifier()
+ Identifier() "=" DomainExpression()
 }
 
 void  DomainSliceExpression() :
@@ -1520,17 +1502,11 @@ void  ModuleAccessExpression() :
     ModuleIdentifierList() "." Identifier()
 }
 
-void  ModuleIdentifier() :
-{}
-{
-Identifier()
-}
-
 void  ModuleIdentifierList() :
 {}
 {
-ModuleIdentifier()
-|ModuleIdentifier() "." ModuleIdentifierList()
+Identifier()
+|Identifier() "." ModuleIdentifierList()
 }
 
 void  ReduceExpression() :
@@ -1630,13 +1606,7 @@ void  IteratableCallExpression() :
 void  EnumConstantExpression() :
 {}
 {
-    EnumType() "." Identifier()
-}
-
-void  EnumType() :
-{}
-{
-    Identifier()
+    Identifier() "." Identifier()
 }
 
 void  LiteralExpression() :
