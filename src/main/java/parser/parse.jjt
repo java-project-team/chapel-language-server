@@ -43,14 +43,21 @@ TOKEN :
       | <BINARY_LITERAL>
   >
 |
-  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9", "_"])* >
+  < DECIMAL_LITERAL: ["1"-"9"] (["0"-"9", "_"])* >
 |
-  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F", "_"])+ >
+  < HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F", "_"])+ >
 |
-  < #OCTAL_LITERAL: "0" ["O", "o"] (["0"-"7", "_"])+ >
+  < OCTAL_LITERAL: "0" ["O", "o"] (["0"-"7", "_"])+ >
 |
-  < #BINARY_LITERAL : "0" ["B", "b"] ("0"| "1" |"_")+ >
+  < BINARY_LITERAL : "0" ["B", "b"] ("0"| "1" |"_")+ >
+|
+  < EXPONENT_PART: ["e", "E"] ["+", "-"] <INTEGER_LITERAL> >
+|
+  < PEXPONENT_PART: ["p", "P"] ["+", "-"] <INTEGER_LITERAL> >
+|
+  <BOOL_LITERAL: (<TRUE> | <FALSE>) >
 }
+
 // OPERATORS
 TOKEN :
 {
@@ -74,6 +81,7 @@ TOKEN :
 | < SHIFTRIGHTEQUAL: ">>=" >
 | < BITWISEANDEQUAL: "&=" >
 | < BITWISEOREQUAL: "|=" >
+| < BITWISEXOREQUAL: "^=" >
 | < POWEQUAL: "**=">
 | < REDUCEEQUAL : "reduce=" >
 | < RANGECOUNT : "#" >
@@ -109,7 +117,11 @@ TOKEN :
 | < DOTSTAR: ".*" >
 | < ARROWSTAR: "->*" >
 // KEYWORDS
+| < VOID: "void" >
+| < NOTHING: "nothing" >
 | < WILDCARD : "_" >
+| < UINT: "uint" >
+| < RANGE: "range" >
 | < ALIGN : "align" >
 | < AS : "as" >
 | < ATOMIC : "atomic" >
@@ -193,10 +205,10 @@ TOKEN :
 | < THIS : "this" >
 | < THROW : "throw" >
 | < THROWS: "throws" >
-| < TRUE : "true" >
+| < TRUE : "True" >
+| < FALSE : "False" >
 | < TRY : "try" >
 | < TYPE : "type" >
-| < UNIT : "uint" >
 | < UNION : "union" >
 | < UNMANAGED : "unmanaged" >
 | < USE : "use" >
@@ -892,7 +904,7 @@ void  IteratableExpression() :
     |<ZIP> "(" ExpressionList() ")"
 }
 
-void  ExpressionList() :
+void ExpressionList() :
 {}
 {
     Expression() "," ExpressionList()
@@ -1016,8 +1028,8 @@ ParentheseslessFunctionIdentifier()
 void  MemberAccessExpression() :
 {}
 {
-    FieldAccessExpression()
-    |MethodCallExpression()
+    MethodCallExpression()
+    | FieldAccessExpression()
 }
 
 void  MethodCallExpression() :
@@ -1085,34 +1097,17 @@ void IfStatement() :
     [<ELSE> Statement()]
 }
 
-void Import() : {} {}
-
-void Declaration() :
-{}
-{
-    ModuleDeclaration()
-    | ProcDeclaration()
-    | ClassDeclaration()
-}
+//void Declaration() :
+//{}
+//{
+//    ModuleDeclaration()
+//    | ProcDeclaration()
+//    | ClassDeclaration()
+//}
 
 void PrivacySpecifier() : {}
 {
     <PRIVATE> | <PUBLIC>
-}
-
-void ModuleDeclaration() :
-{}
-{
-    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> "{" Block() "}"
-}
-
-void Type() :
-{}
-{
-    <INT>
-    | <STRING>
-    | <COMPLEX>
-    | <REAL>
 }
 
 void ReturnIntent() :
@@ -1125,10 +1120,130 @@ void ReturnIntent() :
     | <TYPE>
 }
 
-void TypeExpression() :
+void  TypeExpression() :
 {}
 {
-    //todo
+ PrimitiveType()
+|EnumType()
+|StructuredType()
+|DataparallelType()
+|SynchronizationType()
+|LvalueExpression()
+|IfExpression()
+|UnaryExpression()
+|BinaryExpression()
+}
+
+void  SynchronizationType() :
+{}
+{
+ SyncType()
+|SingleType()
+|AtomicType()
+}
+
+void  DataparallelType() :
+{}
+{
+ RangeType()
+|DomainType()
+|MappedDomainType()
+|ArrayType()
+|IndexType()
+}
+
+void  MappedDomainType() :
+{}
+{
+ DomainType() <DMAPPED> DmapValue()
+}
+
+void  ArrayType() :
+{}
+{
+ "[" DomainExpression() "]" TypeExpression()
+}
+
+void  IndexType() :
+{}
+{
+ <INDEX> "(" DomainExpression() ")"
+}
+
+void  RangeType() :
+{}
+{
+ <RANGE> "(" NamedExpressionList() ")"
+}
+
+void  StructuredType() :
+{}
+{
+ ClassType()
+| RecordType()
+| UnionType()
+| TupleType()
+}
+
+void  RecordType() :
+{}
+{
+ Identifier()
+|Identifier()"(" NamedExpressionList() ")"
+}
+
+void  TupleType() :
+{}
+{
+ "(" TypeExpression() "," TypeList() ")"
+|"(" TypeExpression()"," ")"
+}
+
+void  TypeList() :
+{}
+{
+ TypeExpression()
+|TypeExpression()"," TypeList()
+}
+
+void  UnionType() :
+{}
+{
+ Identifier()
+}
+
+void  PrimitiveTypeParameterPart() :
+{}
+{
+ "(" IntegerParameterExpression() ")"
+}
+
+void  IntegerParameterExpression() :
+{}
+{
+ Expression()
+}
+
+void  PrimitiveType() :
+{}
+{
+ <VOID> 
+|<NOTHING>
+|<BOOL> [PrimitiveTypeParameterPart()]
+|<INT> [PrimitiveTypeParameterPart()]
+|<UINT> [PrimitiveTypeParameterPart()]
+|<REAL> [PrimitiveTypeParameterPart()]
+|<IMAG> [PrimitiveTypeParameterPart()]
+|<COMPLEX> [PrimitiveTypeParameterPart()]
+|<STRING>
+|<BYTES>
+|<ENUM>
+|<RECORD>
+|<CLASS>
+|<OWNED>
+|<SHARED>
+|<UNMANAGED>
+|<BORROWED>
 }
 
 void Operator() :
@@ -1224,12 +1339,462 @@ void ProcKind() :
     <INLINE> | <EXPORT> | <EXTERN> | <OVERRIDE>
 }
 
-void ClassDeclaration() :
-{}
-{}
-
 void Expression() :
 {}
 {
-
+VariableExpression()
+|EnumConstantExpression()
+|CallExpression()
+|TypeExpression()
+|IteratableCallExpression()
+|NewExpression()
+|QueryExpression()
+|LvalueExpression()
+|CastExpression()
+|LiteralExpression()
+|MemberAccessExpression()
+|ParenthesizedExpression()
+|UnaryExpression()
+|BinaryExpression()
+|LetExpression()
+|IfExpression()
+|ForExpression()
+|ForallExpression()
+|ReduceExpression()
+|ScanExpression()
+|ModuleAccessExpression()
+|TupleExpression()
+|TupleExpandExpression()
+|LocaleQueryExpression()
+|TypeQueryExpression()
+|MappedDomainExpression()
 }
+
+void  TypeQueryExpression() :
+{}
+{
+    Expression()"." <TYPE>
+}
+
+void  MappedDomainExpression() :
+{}
+{
+    DomainExpression() <DMAPPED> DmapValue()
+}
+
+void  DmapValue() :
+{}
+{
+ Expression()
+}
+
+void  DomainExpression() :
+{}
+{
+DomainLiteral()
+|DomainName()
+|DomainAssignmentExpression()
+| (DomainLiteral()
+   |DomainName()
+   |DomainAssignmentExpression()) <ALIGN> Expression()
+|DomainAlignmentExpression()
+|DomainStridingExpression()
+|DomainSliceExpression()
+}
+
+void  DomainAlignmentExpression() :
+{}
+{
+ DomainExpression() <ALIGN> Expression()
+}
+
+void  DomainAssignmentExpression() :
+{}
+{
+ DomainName() "=" DomainExpression()
+}
+
+void  DomainName() :
+{}
+{
+ Identifier()
+}
+
+void  DomainSliceExpression() :
+{}
+{
+ DomainExpression()"[" SlicingIndexSet() "]"
+|DomainExpression()"(" SlicingIndexSet() ")"
+}
+
+void  SlicingIndexSet() :
+{}
+{
+ DomainExpression()
+|RangeExpressionList()
+}
+
+void  DomainStridingExpression() :
+{}
+{
+ DomainExpression() <BY> Expression()
+}
+
+void  DomainType() :
+{}
+{
+ BaseDomainType()
+|SimpleSubdomainType()
+|SparseSubdomainType()
+}
+
+void  SimpleSubdomainType() :
+{}
+{
+ <SUBDOMAIN> "(" DomainExpression() ")"
+}
+
+void  SparseSubdomainType() :
+{}
+{
+ <SPARSE>[<SUBDOMAIN>]"(" DomainExpression() ")"
+}
+
+void  BaseDomainType() :
+{}
+{
+ RectangularDomainType()
+|AssociativeDomainType()
+}
+
+void  RectangularDomainType() :
+{}
+{
+ <DOMAIN>"(" NamedExpressionList() ")"
+}
+
+void  AssociativeDomainType() :
+{}
+{
+ <DOMAIN> "(" AssociativeIndexType() ")"
+}
+
+void  AssociativeIndexType() :
+{}
+{
+ TypeExpression()
+}
+
+void  LocaleQueryExpression() :
+{}
+{
+    Expression()"." <LOCALE>
+}
+
+void  TupleExpandExpression() :
+{}
+{
+    "(" <ARGS> Expression() ")"
+}
+
+void  TupleExpression() :
+{}
+{
+ "(" TupleComponent() "," ")"
+| "(" TupleComponent() "," TupleComponentList() ")"
+| "(" TupleComponent() "," TupleComponentList() "," ")"
+}
+
+void  TupleComponentList() :
+{}
+{
+ TupleComponent()
+|TupleComponent() "," TupleComponentList()
+}
+
+void  TupleComponent() :
+{}
+{
+ Expression()
+| "_"
+}
+
+void  ModuleAccessExpression() :
+{}
+{
+    ModuleIdentifierList() "." Identifier()
+}
+
+void  ModuleIdentifier() :
+{}
+{
+Identifier()
+}
+
+void  ModuleIdentifierList() :
+{}
+{
+ModuleIdentifier()
+|ModuleIdentifier() "." ModuleIdentifierList()
+}
+
+void  ReduceExpression() :
+{}
+{
+    ReduceScanOperator()<REDUCE> IteratableExpression()
+    |ClassType()<REDUCE> IteratableExpression()
+}
+
+void  ScanExpression() :
+{}
+{
+    ReduceScanOperator() <SCAN> IteratableExpression()
+    |ClassType() <SCAN> IteratableExpression()
+}
+
+void  IfExpression() :
+{}
+{
+<IF> Expression() <THEN> Expression() <ELSE> Expression()
+| <IF> Expression() <THEN> Expression()
+}
+
+void  ForExpression() :
+{}
+{
+<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression()
+|<FOR> IteratableExpression() <DO> Expression()
+}
+
+void  ForallExpression() :
+{}
+{
+ <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression()
+| <FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression()
+|"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression()
+|"[" IteratableExpression() [TaskIntentClause()] "]" Expression()
+}
+
+void  LetExpression() :
+{}
+{
+    <LET> VariableDeclarationList() <IN> Expression()
+}
+
+void  BinaryExpression() :
+{}
+{
+    Expression() BinaryOperator() Expression()
+}
+
+void  BinaryOperator() :
+{}
+{
+ "+" | "-" | "*" | "/" | "%" | <POW> | "&" | "|" | "^"
+ | <SHIFTLEFT> | <SHIFTRIGHT> | <AND> | <OR> | <EQUAL>
+ | <NOTEQUAL> | <LESSTHANOREQUALTO> | <GREATERTHANOREQUALTO>
+ | <LESSTHAN> | <GREATERTHAN> | <BY> | <RANGECOUNT>
+}
+
+void  UnaryExpression() :
+{}
+{
+    UnaryOperator() Expression()
+}
+
+void  UnaryOperator() :
+{}
+{
+ "+" | "-" | "~" | "!"
+}
+
+void  CastExpression() :
+{}
+{
+   Expression() ":" TypeExpression()
+}
+
+void QueryExpression() :
+{}
+{
+    "?" [Identifier()]
+}
+
+void  NewExpression() :
+{}
+{
+  <NEW> TypeExpression()"(" ArgumentList() ")"
+}
+
+void  IteratableCallExpression() :
+{}
+{
+    CallExpression()
+}
+
+void  EnumConstantExpression() :
+{}
+{
+    EnumType() "." Identifier()
+}
+
+void  EnumType() :
+{}
+{
+    Identifier()
+}
+
+void  LiteralExpression() :
+{}
+{
+ BoolLiteral()
+|IntegerLiteral()
+|RealLiteral()
+|ImaginaryLiteral()
+|StringLiteral()
+|BytesLiteral()
+|RangeLiteral()
+|DomainLiteral()
+|ArrayLiteral()
+}
+void RealLiteral() : {} {<REAL_LITERAL> }
+void ImaginaryLiteral() : {} {<IMAGINARY_LITERAL> }
+void StringLiteral() : {} {
+<INTERPRETED_STRING_LITERAL>
+}
+
+void  BoolLiteral() :
+{}
+{
+  <BOOL_LITERAL>
+}
+
+void  IntegerLiteral() :
+{}
+{
+    <INTEGER_LITERAL>
+}
+
+TOKEN : {
+  <REAL_LITERAL :
+    ((<INTEGER_LITERAL>)? "\."  (<EXPONENT_PART>)?)
+    | <INTEGER_LITERAL> ("\.")? <EXPONENT_PART>
+    | (<HEX_LITERAL> )? "\." <HEX_LITERAL> (<PEXPONENT_PART>)?
+    | (<HEX_LITERAL> )? "\." <HEX_LITERAL>  (<PEXPONENT_PART>)?
+    |  <HEX_LITERAL> ("\.")? <PEXPONENT_PART>
+    |  <HEX_LITERAL> ("\.")? <PEXPONENT_PART>
+    >
+| <IMAGINARY_LITERAL :
+       <INTEGER_LITERAL> "i"
+       | <REAL_LITERAL> "I">
+}
+void  RectangularDomainLiteral() :
+{}
+{
+ "{" RangeExpressionList() "}"
+}
+
+void  RangeExpressionList() :
+{}
+{
+    RangeExpression()
+    |RangeExpression() "," RangeExpressionList()
+}
+
+void  RangeExpression() :
+{}
+{
+    Expression()
+    |StridedRangeExpression()
+    |CountedRangeExpression()
+    |AlignedRangeExpression()
+    |SlicedRangeExpression()
+}
+
+void  SlicedRangeExpression() :
+{}
+{
+    RangeExpression() "(" RangeExpression() ")"
+    |RangeExpression() "[" RangeExpression() "]"
+}
+
+void AlignedRangeExpression() :
+{}
+{
+    RangeExpression() <ALIGN> Expression()
+}
+
+void  CountedRangeExpression() :
+{}
+{
+    RangeExpression() "#" Expression()
+}
+
+void  StridedRangeExpression() :
+{}
+{
+    RangeExpression() <BY> StepExpression()
+}
+
+void  StepExpression() :
+{}
+{
+  Expression()
+}
+
+void  DomainLiteral() :
+{}
+{
+    RectangularDomainLiteral()
+    |AssociativeDomainLiteral()
+}
+
+void  AssociativeDomainLiteral() :
+{}
+{
+ "{" AssociativeExpressionList() "}"
+}
+
+void  AssociativeExpressionList() :
+{}
+{
+    NonRangeExpression()
+    |NonRangeExpression() "," AssociativeExpressionList()
+}
+
+void  NonRangeExpression() :
+{}
+{
+ Expression()
+}
+
+TOKEN : {
+<BYTES_LITERAL : "B" ("\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? | "'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)?)>
+| <UNINTERPRETED_STRING_LITERAL:
+      "\"\"\"" ((~["\""] | "\"" "\"" ~["\""]))* "\"\"\""
+      | "\'\'\'" (~["\'"])* "\'\'\'"
+      >
+| <INTERPRETED_STRING_LITERAL:
+    "\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? "\""
+    | "\'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)? "\'"
+    >
+| <#DOUBLE_QUOTE_DELIMITED_CHARACTERS:
+    (~["\"", "\n"])+
+    >
+| <SINGLE_QUOTE_DELIMITED_CHARACTERS:
+    (~["\'", "\n"])+
+    >
+}
+
+void  BytesLiteral() :
+{}
+{
+    <BYTES_LITERAL>
+}
+
+void  Digits() :
+{}
+{
+  <INTEGER_LITERAL>
+}
+
