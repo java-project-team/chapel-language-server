@@ -1,4 +1,10 @@
-
+options
+{
+  LOOKAHEAD=3;
+  DEBUG_PARSER = true;
+//  DEBUG_LOOKAHEAD = true;
+//  DEBUG_TOKEN_MANAGER = true;
+}
 PARSER_BEGIN(Parser)
 
 /**
@@ -30,10 +36,23 @@ SKIP :
 | "\t"
 | "\n"
 | "\r"
-| <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")?>
 | <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
 }
 /* LITERALS */
+TOKEN : {
+<IMAGINARY_LITERAL :
+       <DECIMAL_LITERAL> "i"
+       | <REAL_LITERAL> "i">
+|<REAL_LITERAL :
+    ((<DECIMAL_LITERAL>)? "." (["0"-"9", "_"])* (<EXPONENT_PART>)?)
+    | (<DECIMAL_LITERAL> (".")? <EXPONENT_PART>)
+    | ((<HEX_LITERAL> )? "." <HEX_LITERAL> (<PEXPONENT_PART>)?)
+    | ((<HEX_LITERAL> )? "." <HEX_LITERAL>  (<PEXPONENT_PART>)?)
+    |  (<HEX_LITERAL> (".")? <PEXPONENT_PART>)
+    |  (<HEX_LITERAL> (".")? <PEXPONENT_PART>)
+    >
+}
 TOKEN :
 {
   < INTEGER_LITERAL:
@@ -240,7 +259,7 @@ TOKEN :
 SimpleNode File() :
 {}
 {
-    Block() <EOF>
+    Block()
     {return jjtThis;}
 }
 
@@ -267,62 +286,61 @@ void RangeLiteral() :
 void Block() :
 {}
 {
-    (
-    Statement())*
+    Statement() Block() | <EOF>
 }
 
 void  ExpressionStatement() :
 {}
 {
-LetExpression() ";"
-|NewExpression() ";"
-|LvalueExpression() ";"
-|CallExpression() ";"
-|MemberAccessExpression() ";"
-|Identifier() ";"
+LOOKAHEAD(3)LetExpression() ";"
+|LOOKAHEAD(3)NewExpression() ";"
+|LOOKAHEAD(3)LvalueExpression() ";"
+|LOOKAHEAD(3)CallExpression() ";"
+|LOOKAHEAD(3)MemberAccessExpression() ";"
+|LOOKAHEAD(3)Identifier() ";"
 }
 
 void Statement() :
 {}
 {
-    BlockStatement()
-    | IfStatement()
-    | ExpressionStatement()
-    | AssignStatement()
-    |  SwapStatement()
-    |  IoStatement()
-    |  SelectStatement()
-    |  WhileDoStatement()
-    |  DoWhileStatement()
-    |  ForStatement()
-    |  LabelStatement()
-    |  BreakStatement()
-    |  ContinueStatement()
-    |  ParamForStatement()
-    |  UseStatement()
-    |  ImportStatement()
-    |  DeferStatement()
-    |  EmptyStatement()
-    |  ReturnStatement()
-    |  YieldStatement()
-    |  ModuleDeclarationStatement()
-    |  ProcedureDeclarationStatement()
-    |  ExternalProcedureDeclarationStatement()
-    |  ExportedProcedureDeclarationStatement()
-    |  IteratorDeclarationStatement()
-    |  MethodDeclarationStatement()
-    |  TypeDeclarationStatement()
-    |  VariableDeclarationStatement()
-    |  RemoteVariableDeclarationStatement()
-    |  OnStatement()
-    |  CobeginStatement()
-    |  CoforallStatement()
-    |  BeginStatement()
-    |  SyncStatement()
-    |  SerialStatement()
-    |  ForallStatement()
-    |  DeleteStatement()
-    |  ManageStatement()
+    LOOKAHEAD(3)BlockStatement()
+    | LOOKAHEAD(3)IfStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
+    | LOOKAHEAD(3)AssignStatement()
+    | LOOKAHEAD(3)SwapStatement()
+    |  LOOKAHEAD(3)IoStatement()
+    |  LOOKAHEAD(3)SelectStatement()
+    |  LOOKAHEAD(3)WhileDoStatement()
+    |  LOOKAHEAD(3)DoWhileStatement()
+    |  LOOKAHEAD(3)ForStatement()
+    |  LOOKAHEAD(3)LabelStatement()
+    |  LOOKAHEAD(3)BreakStatement()
+    |  LOOKAHEAD(3)ContinueStatement()
+    |  LOOKAHEAD(3)ParamForStatement()
+    |  LOOKAHEAD(3)UseStatement()
+    |  LOOKAHEAD(3)ImportStatement()
+    |  LOOKAHEAD(3)DeferStatement()
+    |  LOOKAHEAD(3)EmptyStatement()
+    |  LOOKAHEAD(3)ReturnStatement()
+    |  LOOKAHEAD(3)YieldStatement()
+    |  LOOKAHEAD(3)ModuleDeclarationStatement()
+    |  LOOKAHEAD(3)ProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)ExternalProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)ExportedProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)IteratorDeclarationStatement()
+    |  LOOKAHEAD(3)MethodDeclarationStatement()
+    |  LOOKAHEAD(3)TypeDeclarationStatement()
+    |  LOOKAHEAD(3)VariableDeclarationStatement()
+    |  LOOKAHEAD(3)RemoteVariableDeclarationStatement()
+    |  LOOKAHEAD(3)OnStatement()
+    |  LOOKAHEAD(3)CobeginStatement()
+    |  LOOKAHEAD(3)CoforallStatement()
+    |  LOOKAHEAD(3)BeginStatement()
+    |  LOOKAHEAD(3)SyncStatement()
+    |  LOOKAHEAD(3)SerialStatement()
+    |  LOOKAHEAD(3)ForallStatement()
+    |  LOOKAHEAD(3)DeleteStatement()
+    |  LOOKAHEAD(3)ManageStatement()
 }
 
 void SwapStatement() :
@@ -348,8 +366,8 @@ void SelectStatement() :
 {
     <SELECT> Expression() "{"
     (
-    <WHEN> (Expression())+ (<DO> Statement() | BlockStatement())
-    | <OTHERWISE> (Statement() | <DO> Statement())
+    <WHEN> (LOOKAHEAD(2)Expression())+ (<DO> Statement() | BlockStatement())
+    | <OTHERWISE> (LOOKAHEAD(3)Statement() | LOOKAHEAD(3)<DO> Statement())
     )
     "}"
 }
@@ -375,7 +393,7 @@ void DoWhileStatement() :
 void ForStatement() :
 {}
 {
-    <FOR> [(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr() (<DO> Statement() | BlockStatement())
+    <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr() (<DO> Statement() | BlockStatement())
 }
 
 void IterableExpr() :
@@ -392,12 +410,12 @@ void LabelStatement() :
 void BreakStatement() :
 {}
 {
-    <BREAK> [<ID>]
+    <BREAK> [LOOKAHEAD(2)<ID>]
 }
 void ContinueStatement() :
 {}
 {
-    <CONTINUE> [<ID>]
+    <CONTINUE> [LOOKAHEAD(2)<ID>]
 }
 void ParamForStatement() :
 {}
@@ -407,14 +425,14 @@ void ParamForStatement() :
 void UseStatement() :
 {}
 {
-    PrivacySpecifier() <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
+    [PrivacySpecifier()] <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
 }
 
 void LimitationClause() :
 {}
 {
     (<EXCEPT> Exclude() ("," Exclude())* )
-    | (<ONLY> [RenameBase() ("," RenameBase())* ])
+    | (<ONLY> [LOOKAHEAD(3)RenameBase() ("," RenameBase())* ])
 }
 
 void Exclude() :
@@ -427,8 +445,8 @@ void Exclude() :
 void ModuleOrEnumName() :
 {}
 {
-    RenameBase()
-    | <ID> "." ModuleOrEnumName()
+    LOOKAHEAD(3)RenameBase()
+    | LOOKAHEAD(3)<ID> "." ModuleOrEnumName()
 }
 
 void RenameBase() :
@@ -447,21 +465,21 @@ void ImportStatement() :
 void ImportExpr() :
 {}
 {
-    ModuleOrSymbolRename()
-    | ModuleOrSymbolBase() UnqualifiedList()
+    LOOKAHEAD(3)ModuleOrSymbolRename()
+    | LOOKAHEAD(3)ModuleOrSymbolBase() UnqualifiedList()
 }
 
 void ModuleOrSymbolBase() :
 {}
 {
-    <ID> ["." ModuleOrSymbolBase()]
+    <ID>[LOOKAHEAD(3)"." ModuleOrSymbolBase()]
 }
 
 void ModuleOrSymbolRename() :
 {}
 {
-    RenameBase()
-    | <ID> "." ModuleOrSymbolRename()
+    LOOKAHEAD(3)RenameBase()
+    | LOOKAHEAD(3)<ID> "." ModuleOrSymbolRename()
 }
 
 void UnqualifiedList() :
@@ -496,7 +514,7 @@ void YieldStatement() :
 void ModuleDeclarationStatement() :
 {}
 {
-    PrivacySpecifier() <PROTOTYPE> <MODULE> <ID> BlockStatement()
+    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> BlockStatement()
 }
 
 void ProcedureDeclarationStatement() :
@@ -504,10 +522,10 @@ void ProcedureDeclarationStatement() :
 {
     [PrivacySpecifier()]
     [ProcKind()]
-    (<PROC> <ID> [ArgumentList()] | <OPERATOR> ArgumentList())
-    [ReturnIntent()]
+    (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> ArgumentList())
+    [LOOKAHEAD(3)ReturnIntent()]
     [ReturnType() ]
-    [WhereClause() ]
+    [WhereClause() ] FunctionBody()
 
 }
 
@@ -530,13 +548,13 @@ void ReturnType() :
 void ExternalProcedureDeclarationStatement() :
 {}
 {
-    <EXTERN> [Expression()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType()]
+    <EXTERN> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType()]
 }
 
 void ExportedProcedureDeclarationStatement() :
 {}
 {
-    <EXPORT> [Expression()] <PROC> <ID> ArgumentList() [ReturnIntent()] [ReturnType() ]
+    <EXPORT> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType() ]
 }
 
 void IteratorDeclarationStatement() :
@@ -563,7 +581,7 @@ void YieldIntent() :
 void MethodDeclarationStatement() :
 {}
 {
-    [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [TypeBinding()]
+    [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [LOOKAHEAD(3)TypeBinding()]
         <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  FunctionBody()
 }
 
@@ -587,8 +605,8 @@ void TypeDeclarationStatement() :
 {
     EnumDeclarationStatement()
     |  ClassDeclarationStatement()
-    |  RecordDeclarationStatement()
-    |  UnionDeclarationStatement()
+    |  LOOKAHEAD(3)RecordDeclarationStatement()
+    |  LOOKAHEAD(3)UnionDeclarationStatement()
     |  TypeAliasDeclarationStatement()
 }
 
@@ -601,8 +619,8 @@ void EnumDeclarationStatement() :
 void EnumConstantList() :
 {}
 {
-  EnumConstant()
-|  EnumConstant() "," [EnumConstantList()]
+  LOOKAHEAD(3)EnumConstant()
+|  LOOKAHEAD(3)EnumConstant() "," [EnumConstantList()]
 }
 
 void EnumConstant():
@@ -630,36 +648,36 @@ void ClassInherit() :
 void BasicClassType() :
 {}
 {
-    <ID> "(" NamedExpressionList() ")"
-    |<ID>
+    LOOKAHEAD(3)<ID> "(" NamedExpressionList() ")"
+    |LOOKAHEAD(3)<ID>
 }
 
 void  NamedExpressionList() :
 {}
 {
-    NamedExpression() "," NamedExpressionList()
-    |NamedExpression()
+    LOOKAHEAD(3)NamedExpression() "," NamedExpressionList()
+    |LOOKAHEAD(3)NamedExpression()
 }
 
 void  NamedExpression() :
 {}
 {
-    Expression()
-    |<ID> "=" Expression()
+    LOOKAHEAD(3)Expression()
+    |LOOKAHEAD(3)<ID> "=" Expression()
 }
 
 void ClassStatementList() :
 {}
 {
-    ClassStatement() ClassStatementList()
-    |ClassStatement()
+    LOOKAHEAD(3)ClassStatement() ClassStatementList()
+    |LOOKAHEAD(3)ClassStatement()
 }
 
 void ClassStatement() :
 {}
 {
-    VariableDeclarationStatement()
-    |MethodDeclarationStatement()
+    LOOKAHEAD(3)VariableDeclarationStatement()
+    |LOOKAHEAD(3)MethodDeclarationStatement()
     |TypeDeclarationStatement()
     |EmptyStatement()
 }
@@ -688,15 +706,15 @@ void SimpleRecordDeclarationStatement() :
 void RecordStatementList() :
 {}
 {
-    RecordStatement()
-    |RecordStatement() RecordStatementList()
+    LOOKAHEAD(3)RecordStatement()
+    |LOOKAHEAD(3)RecordStatement() RecordStatementList()
 }
 
 void RecordStatement() :
 {}
 {
-    VariableDeclarationStatement()
-    |MethodDeclarationStatement()
+    LOOKAHEAD(3)VariableDeclarationStatement()
+    |LOOKAHEAD(3)MethodDeclarationStatement()
     |TypeDeclarationStatement()
     |EmptyStatement()
 }
@@ -710,16 +728,16 @@ void UnionDeclarationStatement() :
 void UnionStatementList() :
 {}
 {
-    UnionStatement() UnionStatementList()
-    |UnionStatement()
+    LOOKAHEAD(3)UnionStatement() UnionStatementList()
+    |LOOKAHEAD(3)UnionStatement()
 }
 
 void UnionStatement() :
 {}
 {
-    TypeDeclarationStatement()
-    |ProcedureDeclarationStatement()
-    |IteratorDeclarationStatement()
+    LOOKAHEAD(3)TypeDeclarationStatement()
+    |LOOKAHEAD(3)ProcedureDeclarationStatement()
+    |LOOKAHEAD(3)IteratorDeclarationStatement()
     |VariableDeclarationStatement()
     |EmptyStatement()
 }
@@ -740,21 +758,22 @@ void  ExternalTypeAliasDeclarationStatement() :
 void TypeAliasDeclarationList() :
 {}
 {
-    TypeAliasDeclaration() "," TypeAliasDeclarationList()
-    |TypeAliasDeclaration()
+    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
+    |LOOKAHEAD(3)TypeAliasDeclaration()
 }
 
 void TypeAliasDeclaration() :
 {}
 {
-    Identifier()
-    |Identifier() "=" TypeExpression()
+    LOOKAHEAD(3)Identifier()
+    |LOOKAHEAD(3)Identifier() "=" TypeExpression()
 }
 
 void VariableDeclarationStatement() :
 {}
 {
-    [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind() VariableDeclarationList() ";"
+    [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind()
+    VariableDeclaration() ("," VariableDeclaration())* ";"
 }
 
 void ConfigExternOrExport():
@@ -777,14 +796,14 @@ void VariableKind() :
 void VariableDeclarationList() :
 {}
 {
-    VariableDeclaration() "," VariableDeclarationList()
-    |VariableDeclaration()
+    LOOKAHEAD(3)VariableDeclaration() "," VariableDeclarationList()
+    |LOOKAHEAD(3)VariableDeclaration()
 }
 
 void VariableDeclaration() :
 {}
 {
-    IdentifierList() [TypePart()] [InitializationPart()]
+    Identifier() ("," Identifier())* [TypePart()] [InitializationPart()]
 }
 
 void TypePart() :
@@ -802,16 +821,16 @@ void InitializationPart() :
 void IdentifierList() :
 {}
 {
-    Identifier() "," IdentifierList()
-    |Identifier()
-    |TupleGroupedIdentifierList() "," IdentifierList()
-    |TupleGroupedIdentifierList()
+    LOOKAHEAD(3)Identifier() "," IdentifierList()
+    |LOOKAHEAD(3)Identifier()
+    |LOOKAHEAD(3)TupleGroupedIdentifierList() "," IdentifierList()
+    |LOOKAHEAD(3)TupleGroupedIdentifierList()
 }
 
 void TupleGroupedIdentifierList() :
 {}
 {
-    "(" IdentifierList() ")"
+    "(" (Identifier() ("," Identifier())* ) ")"
 }
 
 void RemoteVariableDeclarationStatement() :
@@ -823,8 +842,8 @@ void RemoteVariableDeclarationStatement() :
 void OnStatement() :
 {}
 {
-    <ON> Expression() <DO> Statement()
-    |<ON> Expression() BlockStatement()
+    LOOKAHEAD(3)<ON> Expression() <DO> Statement()
+    |LOOKAHEAD(3)<ON> Expression() BlockStatement()
 }
 
 void CobeginStatement() :
@@ -843,10 +862,10 @@ void  TaskIntentClause() :
 void  TaskIntentItem() :
 {}
 {
-FormalIntent() Identifier()
+LOOKAHEAD(3)FormalIntent() Identifier()
 |ReduceScanOperator() <REDUCE> Identifier()
 |ClassType() <REDUCE> Identifier()
-|TaskPrivateVarDecl()
+|LOOKAHEAD(3)TaskPrivateVarDecl()
 }
 
 void ClassType() :
@@ -879,8 +898,8 @@ void  ReduceScanOperator() :
 void  TaskIntentList() :
 {}
 {
-    TaskIntentItem() "," TaskIntentList()
-    |TaskIntentItem()
+    LOOKAHEAD(3)TaskIntentItem() "," TaskIntentList()
+    |LOOKAHEAD(3)TaskIntentItem()
 }
 
 void  TaskPrivateVarDecl() :
@@ -900,10 +919,10 @@ void  TaskPrivateVarKind() :
 void CoforallStatement() :
 {}
 {
- <COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] <DO> Statement()
-|<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] BlockStatement()
-|<COFORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-|<COFORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+ LOOKAHEAD(3)<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] <DO> Statement()
+|LOOKAHEAD(3)<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] BlockStatement()
+|LOOKAHEAD(3)<COFORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+|LOOKAHEAD(3)<COFORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
 }
 
 void  IteratableExpression() :
@@ -916,8 +935,8 @@ void  IteratableExpression() :
 void ExpressionList() :
 {}
 {
-    Expression() "," ExpressionList()
-    |Expression()
+    LOOKAHEAD(3)Expression() "," ExpressionList()
+    |LOOKAHEAD(3)Expression()
 }
 
 void  IndexVarDeclaration() :
@@ -936,8 +955,8 @@ void  BeginStatement() :
 void  SyncStatement() :
 {}
 {
- <SYNC> Statement()
-|<SYNC> BlockStatement()
+ LOOKAHEAD(3)<SYNC> Statement()
+|LOOKAHEAD(3)<SYNC> BlockStatement()
 }
 
 void  SyncType() :
@@ -949,8 +968,8 @@ void  SyncType() :
 void  SerialStatement() :
 {}
 {
- <SERIAL> [Expression()] <DO> Statement()
-|<SERIAL> [Expression()] BlockStatement()
+ LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] <DO> Statement()
+|LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] BlockStatement()
 }
 
 void  AtomicType() :
@@ -968,12 +987,12 @@ void  SingleType() :
 void  ForallStatement() :
 {}
 {
-  <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-| <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
-| <FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-| <FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
-| "[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
-| "[" IteratableExpression() [TaskIntentClause()] "]" Statement()
+  LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+| LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
+| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+| LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
+| LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Statement()
 }
 
 void  DeleteStatement() :
@@ -985,16 +1004,16 @@ void  DeleteStatement() :
 void ManageStatement() :
 {}
 {
-    <MANAGE> ManagerExpressionList() <DO> Statement()
-    |<MANAGE> ManagerExpressionList() BlockStatement()
+    LOOKAHEAD(3)<MANAGE> ManagerExpressionList() <DO> Statement()
+    |LOOKAHEAD(3)<MANAGE> ManagerExpressionList() BlockStatement()
 }
 
 void ManagerExpression() :
 {}
 {
-Expression() <AS> VariableKind() Identifier()
-|Expression() <AS> Identifier()
-|Expression()
+LOOKAHEAD(3)Expression() <AS> VariableKind() Identifier()
+|LOOKAHEAD(3)Expression() <AS> Identifier()
+|LOOKAHEAD(3)Expression()
 }
 
 void ManagerExpressionList() :
@@ -1013,9 +1032,9 @@ void AssignStatement() :
 void  LvalueExpression() :
 {}
 {
-    Identifier()
-    |MemberAccessExpression()
-    |ParenthesizedExpression()
+    LOOKAHEAD(3)Identifier()
+    |LOOKAHEAD(3)MemberAccessExpression()
+    |LOOKAHEAD(3)ParenthesizedExpression()
 //    | CallExpression()
 }
 
@@ -1028,23 +1047,23 @@ void  ParenthesizedExpression() :
 void  CallExpression() :
 {}
 {
- LvalueExpression()"[" NamedExpressionList()"]"
-|LvalueExpression()"(" NamedExpressionList()")"
+ LOOKAHEAD(3)LvalueExpression()"[" NamedExpressionList()"]"
+|LOOKAHEAD(3)LvalueExpression()"(" NamedExpressionList()")"
 }
 
 void  MemberAccessExpression() :
 {}
 {
-    MethodCallExpression()
-    | FieldAccessExpression()
+    LOOKAHEAD(3)MethodCallExpression()
+    | LOOKAHEAD(3)FieldAccessExpression()
 }
 
 void  MethodCallExpression() :
 {}
 {
-ReceiverClause() Expression()"(" NamedExpressionList() ")"
-|ReceiverClause() Expression()"[" NamedExpressionList() "]"
-|ReceiverClause() Identifier()
+LOOKAHEAD(3)ReceiverClause() Expression()"(" NamedExpressionList() ")"
+|LOOKAHEAD(3)ReceiverClause() Expression()"[" NamedExpressionList() "]"
+|LOOKAHEAD(3)ReceiverClause() Identifier()
 }
 
 void  ReceiverClause() :
@@ -1090,7 +1109,7 @@ void IfStatement() :
 {
     <IF> (Expression() | CTRLDecl() )
     (<THEN> Statement() | BlockStatement())
-    [<ELSE> Statement()]
+    [LOOKAHEAD(3)<ELSE> Statement()]
 }
 
 //void Declaration() :
@@ -1109,8 +1128,8 @@ void PrivacySpecifier() : {}
 void ReturnIntent() :
 {}
 {
-    <CONST> <REF>
-    | <CONST>
+    LOOKAHEAD(3)<CONST> <REF>
+    | LOOKAHEAD(3)<CONST>
     | <REF>
     | <PARAM>
     | <TYPE>
@@ -1119,15 +1138,15 @@ void ReturnIntent() :
 void  TypeExpression() :
 {}
 {
- PrimitiveType()
-|Identifier()
-|StructuredType()
-|DataparallelType()
+ LOOKAHEAD(3)PrimitiveType()
+|LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)StructuredType()
+|LOOKAHEAD(3)DataparallelType()
 |SynchronizationType()
-|LvalueExpression()
-|IfExpression()
-|UnaryExpression()
-|BinaryExpression()
+|LOOKAHEAD(3)LvalueExpression()
+|LOOKAHEAD(3)IfExpression()
+|LOOKAHEAD(3)UnaryExpression()
+|LOOKAHEAD(3)BinaryExpression()
 }
 
 void  SynchronizationType() :
@@ -1142,8 +1161,8 @@ void  DataparallelType() :
 {}
 {
  RangeType()
-|DomainType()
-|MappedDomainType()
+|LOOKAHEAD(3)DomainType()
+|LOOKAHEAD(3)MappedDomainType()
 |ArrayType()
 |IndexType()
 }
@@ -1175,31 +1194,31 @@ void  RangeType() :
 void  StructuredType() :
 {}
 {
- ClassType()
-| RecordType()
-| Identifier()
+ LOOKAHEAD(3)ClassType()
+| LOOKAHEAD(3)RecordType()
+| LOOKAHEAD(3)Identifier()
 | TupleType()
 }
 
 void  RecordType() :
 {}
 {
- Identifier()
-|Identifier()"(" NamedExpressionList() ")"
+ LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)Identifier()"(" NamedExpressionList() ")"
 }
 
 void  TupleType() :
 {}
 {
- "(" TypeExpression() "," TypeList() ")"
-|"(" TypeExpression()"," ")"
+ LOOKAHEAD(3)"(" TypeExpression() "," TypeList() ")"
+|LOOKAHEAD(3)"(" TypeExpression()"," ")"
 }
 
 void  TypeList() :
 {}
 {
- TypeExpression()
-|TypeExpression()"," TypeList()
+ LOOKAHEAD(3)TypeExpression()
+|LOOKAHEAD(3)TypeExpression()"," TypeList()
 }
 
 void  PrimitiveTypeParameterPart() :
@@ -1217,14 +1236,14 @@ void  IntegerParameterExpression() :
 void  PrimitiveType() :
 {}
 {
- <VOID> 
+ <VOID>
 |<NOTHING>
-|<BOOL> [PrimitiveTypeParameterPart()]
-|<INT> [PrimitiveTypeParameterPart()]
-|<UINT> [PrimitiveTypeParameterPart()]
-|<REAL> [PrimitiveTypeParameterPart()]
-|<IMAG> [PrimitiveTypeParameterPart()]
-|<COMPLEX> [PrimitiveTypeParameterPart()]
+|<INT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|<BOOL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|<UINT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|<REAL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|<IMAG>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|<COMPLEX>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
 |<STRING>
 |<BYTES>
 |<ENUM>
@@ -1287,28 +1306,28 @@ void Operator() :
 void ArgumentList() :
 {}
 {
-    "(" Formal() ("," Formal())* ")"
+    "(" [Formal() ("," Formal())*] ")"
 }
 
 void FormalType() :
 {}
 {
-    ":" (TypeExpression() | "?" [TypeExpression()])
+    ":" (TypeExpression() | LOOKAHEAD(3)"?" [LOOKAHEAD(3)TypeExpression()])
 }
 
 void VariableArgumentExpr() :
 {}
 {
-    <ARGS> (Expression()  | "?" <ID>)?
+    <ARGS> (Expression()  | LOOKAHEAD(3)"?" <ID>)?
 }
 
 void Formal() :
 {}
 {
-      FormalIntent()
+     [ FormalIntent()]
       (<ID> | TupleGroupedIdentifierList())
       [FormalType()]
-      ("=" Expression()  | VariableArgumentExpr() )
+      ("=" Expression()  | VariableArgumentExpr() )?
 }
 
 void FormalIntent() :
@@ -1332,32 +1351,32 @@ void ProcKind() :
 void Expression() :
 {}
 {
-Identifier()
-|EnumConstantExpression()
+LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)EnumConstantExpression()
 //|CallExpression()
 //|TypeExpression()
 //|IteratableCallExpression()
-|NewExpression()
-|QueryExpression()
+|LOOKAHEAD(3)NewExpression()
+|LOOKAHEAD(3)QueryExpression()
 //|LvalueExpression()
 //|CastExpression()
-//|LiteralExpression()
+|LiteralExpression()
 //|MemberAccessExpression()
-|ParenthesizedExpression()
-|UnaryExpression()
+|LOOKAHEAD(3)ParenthesizedExpression()
+|LOOKAHEAD(3)UnaryExpression()
 //|BinaryExpression()
 |LetExpression()
 |IfExpression()
 |ForExpression()
 |ForallExpression()
-|ReduceExpression()
-|ScanExpression()
-|ModuleAccessExpression()
-|TupleExpression()
-|TupleExpandExpression()
+|LOOKAHEAD(3)ReduceExpression()
+|LOOKAHEAD(3)ScanExpression()
+|LOOKAHEAD(3)ModuleAccessExpression()
+|LOOKAHEAD(3)TupleExpression()
+|LOOKAHEAD(3)TupleExpandExpression()
 //|LocaleQueryExpression()
 //|TypeQueryExpression()
-|MappedDomainExpression()
+|LOOKAHEAD(3)MappedDomainExpression()
 }
 
 void  TypeQueryExpression() :
@@ -1382,8 +1401,8 @@ void  DomainExpression() :
 {}
 {
 (DomainLiteral()
-|Identifier()
-|DomainAssignmentExpression()) (DomainAlignmentExpression() | DomainStridingExpression() | DomainSliceExpression())
+|LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)DomainAssignmentExpression()) (DomainAlignmentExpression() | DomainStridingExpression() | DomainSliceExpression())
 }
 
 void  DomainAlignmentExpression() :
@@ -1407,8 +1426,8 @@ void  DomainSliceExpression() :
 void  SlicingIndexSet() :
 {}
 {
- DomainExpression()
-|RangeExpressionList()
+ LOOKAHEAD(3)DomainExpression()
+|LOOKAHEAD(3)RangeExpressionList()
 }
 
 void  DomainStridingExpression() :
@@ -1440,8 +1459,8 @@ void  SparseSubdomainType() :
 void  BaseDomainType() :
 {}
 {
- RectangularDomainType()
-|AssociativeDomainType()
+ LOOKAHEAD(3)RectangularDomainType()
+|LOOKAHEAD(3)AssociativeDomainType()
 }
 
 void  RectangularDomainType() :
@@ -1477,16 +1496,16 @@ void  TupleExpandExpression() :
 void  TupleExpression() :
 {}
 {
- "(" TupleComponent() "," ")"
-| "(" TupleComponent() "," TupleComponentList() ")"
-| "(" TupleComponent() "," TupleComponentList() "," ")"
+ LOOKAHEAD(3)"(" TupleComponent() "," ")"
+| LOOKAHEAD(3)"(" TupleComponent() "," TupleComponentList() ")"
+| LOOKAHEAD(3)"(" TupleComponent() "," TupleComponentList() "," ")"
 }
 
 void  TupleComponentList() :
 {}
 {
- TupleComponent()
-|TupleComponent() "," TupleComponentList()
+ LOOKAHEAD(3)TupleComponent()
+|LOOKAHEAD(3)TupleComponent() "," TupleComponentList()
 }
 
 void  TupleComponent() :
@@ -1505,8 +1524,8 @@ void  ModuleAccessExpression() :
 void  ModuleIdentifierList() :
 {}
 {
-Identifier()
-|Identifier() "." ModuleIdentifierList()
+LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)Identifier() "." ModuleIdentifierList()
 }
 
 void  ReduceExpression() :
@@ -1526,24 +1545,24 @@ void  ScanExpression() :
 void  IfExpression() :
 {}
 {
-<IF> Expression() <THEN> Expression() <ELSE> Expression()
-| <IF> Expression() <THEN> Expression()
+LOOKAHEAD(3)<IF> Expression() <THEN> Expression() <ELSE> Expression()
+| LOOKAHEAD(3)<IF> Expression() <THEN> Expression()
 }
 
 void  ForExpression() :
 {}
 {
-<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression()
-|<FOR> IteratableExpression() <DO> Expression()
+LOOKAHEAD(3)<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression()
+|LOOKAHEAD(3)<FOR> IteratableExpression() <DO> Expression()
 }
 
 void  ForallExpression() :
 {}
 {
- <FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression()
-| <FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression()
-|"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression()
-|"[" IteratableExpression() [TaskIntentClause()] "]" Expression()
+ LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression()
+| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression()
+|LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression()
+|LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Expression()
 }
 
 void  LetExpression() :
@@ -1613,20 +1632,20 @@ void  LiteralExpression() :
 {}
 {
  BoolLiteral()
-|IntegerLiteral()
-|RealLiteral()
-|ImaginaryLiteral()
-|StringLiteral()
-|BytesLiteral()
-|RangeLiteral()
-|DomainLiteral()
-|ArrayLiteral()
+|LOOKAHEAD(3)RealLiteral()
+|LOOKAHEAD(3)ImaginaryLiteral()
+|LOOKAHEAD(3)IntegerLiteral()
+//|StringLiteral()
+//|BytesLiteral()
+//|LOOKAHEAD(3)RangeLiteral()
+//|LOOKAHEAD(3)DomainLiteral()
+//|ArrayLiteral()
 }
 void RealLiteral() : {} {<REAL_LITERAL> }
 void ImaginaryLiteral() : {} {<IMAGINARY_LITERAL> }
-void StringLiteral() : {} {
-<INTERPRETED_STRING_LITERAL>
-}
+//void StringLiteral() : {} {
+////<INTERPRETED_STRING_LITERAL>
+//}
 
 void  BoolLiteral() :
 {}
@@ -1640,19 +1659,7 @@ void  IntegerLiteral() :
     <INTEGER_LITERAL>
 }
 
-TOKEN : {
-  <REAL_LITERAL :
-    ((<INTEGER_LITERAL>)? "."  (<EXPONENT_PART>)?)
-    | <INTEGER_LITERAL> (".")? <EXPONENT_PART>
-    | (<HEX_LITERAL> )? "." <HEX_LITERAL> (<PEXPONENT_PART>)?
-    | (<HEX_LITERAL> )? "." <HEX_LITERAL>  (<PEXPONENT_PART>)?
-    |  <HEX_LITERAL> (".")? <PEXPONENT_PART>
-    |  <HEX_LITERAL> (".")? <PEXPONENT_PART>
-    >
-| <IMAGINARY_LITERAL :
-       <INTEGER_LITERAL> "i"
-       | <REAL_LITERAL> "I">
-}
+
 void  RectangularDomainLiteral() :
 {}
 {
@@ -1662,8 +1669,8 @@ void  RectangularDomainLiteral() :
 void  RangeExpressionList() :
 {}
 {
-    RangeExpression()
-    |RangeExpression() "," RangeExpressionList()
+    LOOKAHEAD(3)RangeExpression()
+    |LOOKAHEAD(3)RangeExpression() "," RangeExpressionList()
 }
 
 void  RangeExpression() :
@@ -1679,8 +1686,8 @@ void  RangeExpression() :
 void  SlicedRangeExpression() :
 {}
 {
-    RangeExpression() "(" RangeExpression() ")"
-    |RangeExpression() "[" RangeExpression() "]"
+    LOOKAHEAD(3)RangeExpression() "(" RangeExpression() ")"
+    |LOOKAHEAD(3)RangeExpression() "[" RangeExpression() "]"
 }
 
 void AlignedRangeExpression() :
@@ -1710,8 +1717,8 @@ void  StepExpression() :
 void  DomainLiteral() :
 {}
 {
-    RectangularDomainLiteral()
-    |AssociativeDomainLiteral()
+    LOOKAHEAD(3)RectangularDomainLiteral()
+    |LOOKAHEAD(3)AssociativeDomainLiteral()
 }
 
 void  AssociativeDomainLiteral() :
@@ -1723,8 +1730,8 @@ void  AssociativeDomainLiteral() :
 void  AssociativeExpressionList() :
 {}
 {
-    NonRangeExpression()
-    |NonRangeExpression() "," AssociativeExpressionList()
+    LOOKAHEAD(3)NonRangeExpression()
+    |LOOKAHEAD(3)NonRangeExpression() "," AssociativeExpressionList()
 }
 
 void  NonRangeExpression() :
@@ -1733,29 +1740,29 @@ void  NonRangeExpression() :
  Expression()
 }
 
-TOKEN : {
-<BYTES_LITERAL : "B" ("\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? | "'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)?)>
-| <UNINTERPRETED_STRING_LITERAL:
-      "\"\"\"" ((~["\""] | "\"" "\"" ~["\""]))* "\"\"\""
-      | "\'\'\'" (~["\'"])* "\'\'\'"
-      >
-| <INTERPRETED_STRING_LITERAL:
-    "\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? "\""
-    | "\'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)? "\'"
-    >
-| <#DOUBLE_QUOTE_DELIMITED_CHARACTERS:
-    (~["\"", "\n"])+
-    >
-| <SINGLE_QUOTE_DELIMITED_CHARACTERS:
-    (~["\'", "\n"])+
-    >
-}
+//TOKEN : {
+//<BYTES_LITERAL : "B" ("\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? | "'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)?)>
+//| <UNINTERPRETED_STRING_LITERAL:
+//      "\"\"\"" ((~["\""] | "\"" "\"" ~["\""]))* "\"\"\""
+//      | "\'\'\'" (~["\'"])* "\'\'\'"
+//      >
+//| <INTERPRETED_STRING_LITERAL:
+//    "\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? "\""
+//    | "\'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)? "\'"
+//    >
+//| <#DOUBLE_QUOTE_DELIMITED_CHARACTERS:
+//    (~["\"", "\n"])+
+//    >
+//| <SINGLE_QUOTE_DELIMITED_CHARACTERS:
+//    (~["\'", "\n"])+
+//    >
+//}
 
-void  BytesLiteral() :
-{}
-{
-    <BYTES_LITERAL>
-}
+//void  BytesLiteral() :
+//{}
+//{
+////    <BYTES_LITERAL>
+//}
 
 void  Digits() :
 {}
