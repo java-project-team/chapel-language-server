@@ -8,7 +8,7 @@
 */
 
 // Basic printing
-
+var x = write();
 //write("Hello, ");
 //writeln("World!");
 

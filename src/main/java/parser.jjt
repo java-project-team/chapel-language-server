@@ -291,21 +291,16 @@ void Block() :
 void  ExpressionStatement() :
 {}
 {
-LOOKAHEAD(3)LetExpression() ";"
-|LOOKAHEAD(3)NewExpression() ";"
-|LOOKAHEAD(3)LvalueExpression() ";"
-|LOOKAHEAD(3)CallExpression() ";"
-|LOOKAHEAD(3)MemberAccessExpression() ";"
-|LOOKAHEAD(3)Identifier() ";"
+    Expression() ";"
 }
 
 void Statement() :
 {}
 {
     LOOKAHEAD(3)BlockStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
     | LOOKAHEAD(3)IfStatement()
     | LOOKAHEAD(3)AssignStatement()
-    | LOOKAHEAD(3)ExpressionStatement()
     | LOOKAHEAD(3)SwapStatement()
     |  LOOKAHEAD(3)IoStatement()
     |  LOOKAHEAD(3)SelectStatement()
@@ -351,13 +346,19 @@ void SwapStatement() :
 void IoStatement() :
 {}
 {
-    IOExpr() <IO> Expression() ";"
+    IOExpr() ";"
 }
 
 void IOExpr() :
 {}
 {
-    Expression() //| IOExpr()  <IO> Expression()
+    Expression() IOExprRR()
+}
+
+void IOExprRR() :
+{}
+{
+    Expression() [<IO> IOExprRR()]
 }
 
 void SelectStatement() :
@@ -541,7 +542,7 @@ void WhereClause() : {}
 void ReturnType() :
 {}
 {
-    ":" TypeExpression()
+    ":" Expression()
 }
 
 void ExternalProcedureDeclarationStatement() :
@@ -566,7 +567,7 @@ void IteratorDeclarationStatement() :
 void YieldType() :
 {}
 {
-    ":" TypeExpression()
+    ":" Expression()
 }
 
 void YieldIntent() :
@@ -647,13 +648,14 @@ void ClassInherit() :
 void BasicClassType() :
 {}
 {
-    LOOKAHEAD(3)<ID> "(" NamedExpressionList() ")"
+    LOOKAHEAD(3)<ID> "(" (NamedExpression() ("," NamedExpression())*) ")"
     |LOOKAHEAD(3)<ID>
 }
 
 void  NamedExpressionList() :
 {}
 {
+
     LOOKAHEAD(3)NamedExpression() "," NamedExpressionList()
     |LOOKAHEAD(3)NamedExpression()
 }
@@ -764,7 +766,7 @@ void TypeAliasDeclarationList() :
 void TypeAliasDeclaration() :
 {}
 {
-    LOOKAHEAD(3)Identifier() "=" TypeExpression()
+    LOOKAHEAD(3)Identifier() "=" Expression()
     |Identifier()
 }
 
@@ -808,7 +810,7 @@ void VariableDeclaration() :
 void TypePart() :
 {}
 {
- ":" TypeExpression()
+ ":" Expression()
 }
 
 void InitializationPart() :
@@ -961,7 +963,7 @@ void  SyncStatement() :
 void  SyncType() :
 {}
 {
- <SYNC> TypeExpression()
+ <SYNC> Expression()
 }
 
 void  SerialStatement() :
@@ -974,13 +976,13 @@ void  SerialStatement() :
 void  AtomicType() :
 {}
 {
-    <ATOMIC> TypeExpression()
+    <ATOMIC> Expression()
 }
 
 void  SingleType() :
 {}
 {
-    <SINGLE> TypeExpression()
+    <SINGLE> Expression()
 }
 
 void  ForallStatement() :
@@ -1003,8 +1005,8 @@ void  DeleteStatement() :
 void ManageStatement() :
 {}
 {
-    LOOKAHEAD(3)<MANAGE> ManagerExpressionList() <DO> Statement()
-    |LOOKAHEAD(3)<MANAGE> ManagerExpressionList() BlockStatement()
+    LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* <DO> Statement()
+    |LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* BlockStatement()
 }
 
 void ManagerExpression() :
@@ -1028,20 +1030,30 @@ void AssignStatement() :
     LvalueExpression() AssignOperators() Expression() ";"
 }
 
-void  LvalueExpression() :
+void LvalueExpression() :
 {}
 {
-    [CallExpressionRightRecursion()]
-    (LOOKAHEAD(3)Identifier()
-    |LOOKAHEAD(3)MemberAccessExpression()
-    |LOOKAHEAD(3)ParenthesizedExpression())
-
+LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)MemberAccessExpression()
+//|LOOKAHEAD(3)CallExpression()
+|LOOKAHEAD(3)ParenthesizedExpression()
+( ("[" (NamedExpression() ("," NamedExpression())*) "]") | ("(" (NamedExpression() ("," NamedExpression())*) ")") )*
 }
+//void  LvalueExpression() :
+//{}
+//{
+//    (CallExpressionRightRecursion())*
+//    (LOOKAHEAD(3)Identifier()
+//    |LOOKAHEAD(3)ParenthesizedExpression()
+//    |LOOKAHEAD(3)MemberAccessExpression()
+//    )
+//
+//}
 
 void CallExpressionRightRecursion() :
 {}
 {
-    ("[" NamedExpressionList()"]"| "(" NamedExpressionList()")") CallExpressionRightRecursion()
+    "[" (NamedExpression() ("," NamedExpression())*)"]"| "(" (NamedExpression() ("," NamedExpression())*)")"
 }
 
 void  ParenthesizedExpression() :
@@ -1053,15 +1065,18 @@ void  ParenthesizedExpression() :
 void  CallExpression() :
 {}
 {
- LOOKAHEAD(3)LvalueExpression()"[" NamedExpressionList()"]"
-|LOOKAHEAD(3)LvalueExpression()"(" NamedExpressionList()")"
+ LvalueExpression() (("[" (NamedExpression() ("," NamedExpression())*)"]") | ("(" (NamedExpression() ("," NamedExpression())*)")"))
 }
 
 void  MemberAccessExpression() :
 {}
 {
-    LOOKAHEAD(3)MethodCallExpression()
-    | LOOKAHEAD(3)FieldAccessExpression()
+    [Expression() "."]
+    (
+    Expression() "(" (NamedExpression() ("," NamedExpression())*) ")" | Expression() "[" (NamedExpression() ("," NamedExpression())*) "]" | Identifier()
+    |
+    Identifier()
+    )
 }
 
 void  MethodCallExpression() :
@@ -1069,8 +1084,8 @@ void  MethodCallExpression() :
 {
 ReceiverClause()
 (
-  (Expression()"(" NamedExpressionList() ")")
-| (Expression()"[" NamedExpressionList() "]")
+  (Expression()"(" (NamedExpression() ("," NamedExpression())*) ")")
+| (Expression()"[" (NamedExpression() ("," NamedExpression())*) "]")
 | Identifier()
 )
 
@@ -1145,19 +1160,20 @@ void ReturnIntent() :
     | <TYPE>
 }
 
-void  TypeExpression() :
-{}
-{
- LOOKAHEAD(3)BinaryExpression()
-|LOOKAHEAD(3)StructuredType()
-|LOOKAHEAD(3)DataparallelType()
-|LOOKAHEAD(3)PrimitiveType()
-|LOOKAHEAD(3)Identifier()
-|SynchronizationType()
-|LOOKAHEAD(3)LvalueExpression()
-|LOOKAHEAD(3)IfExpression()
-|LOOKAHEAD(3)UnaryExpression()
-}
+//void  TypeExpression() :
+//{}
+//{
+//LOOKAHEAD(3)StructuredType()
+//|LOOKAHEAD(3)DataparallelType()
+//|LOOKAHEAD(3)PrimitiveType()
+////| LOOKAHEAD(3)BinaryExpression()
+//| Expression()
+//|LOOKAHEAD(3)Identifier()
+//|SynchronizationType()
+//|LOOKAHEAD(3)LvalueExpression()
+//|LOOKAHEAD(3)IfExpression()
+//|LOOKAHEAD(3)UnaryExpression()
+//}
 
 void  SynchronizationType() :
 {}
@@ -1186,7 +1202,7 @@ void  MappedDomainType() :
 void  ArrayType() :
 {}
 {
- "[" DomainExpression() "]" TypeExpression()
+ "[" DomainExpression() "]" Expression()
 }
 
 void  IndexType() :
@@ -1198,7 +1214,7 @@ void  IndexType() :
 void  RangeType() :
 {}
 {
- <RANGE> "(" NamedExpressionList() ")"
+ <RANGE> "(" (NamedExpression() ("," NamedExpression())*) ")"
 }
 
 void  StructuredType() :
@@ -1214,21 +1230,20 @@ void  RecordType() :
 {}
 {
  LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)Identifier()"(" NamedExpressionList() ")"
+|LOOKAHEAD(3)Identifier()"(" (NamedExpression() ("," NamedExpression())*) ")"
 }
 
 void  TupleType() :
 {}
 {
- LOOKAHEAD(3)"(" TypeExpression() "," TypeList() ")"
-|LOOKAHEAD(3)"(" TypeExpression()"," ")"
+"(" (Expression() ",")+ ")"
 }
 
 void  TypeList() :
 {}
 {
- LOOKAHEAD(3)TypeExpression()
-|LOOKAHEAD(3)TypeExpression()"," TypeList()
+ LOOKAHEAD(3)Expression()
+|LOOKAHEAD(3)Expression()"," TypeList()
 }
 
 void  PrimitiveTypeParameterPart() :
@@ -1322,7 +1337,7 @@ void ArgumentList() :
 void FormalType() :
 {}
 {
-    ":" (TypeExpression() | LOOKAHEAD(3)"?" [LOOKAHEAD(3)TypeExpression()])
+    ":" (Expression() | LOOKAHEAD(3)"?" [LOOKAHEAD(3)Expression()])
 }
 
 void VariableArgumentExpr() :
@@ -1361,33 +1376,135 @@ void ProcKind() :
 void Expression() :
 {}
 {
- LOOKAHEAD(3)TupleExpression()
-|LOOKAHEAD(3)EnumConstantExpression()
-|LiteralExpression()
-|LOOKAHEAD(3)Identifier()
-|CallExpression()
-//|TypeExpression()
-//|IteratableCallExpression()
-|LOOKAHEAD(3)NewExpression()
-|LOOKAHEAD(3)QueryExpression()
-//|LvalueExpression()
-//|CastExpression()
-//|MemberAccessExpression()
-|LOOKAHEAD(3)ParenthesizedExpression()
-|LOOKAHEAD(3)UnaryExpression()
-//|BinaryExpression()
+   MbTypeExpression()
+}
+
+void MbTypeExpression() :
+{}
+{
+     (LOOKAHEAD(3)TupleType()
+    | LiteralExpression()
+    | DataparallelType()
+    | PrimitiveType()
+    | SynchronizationType()
+    | ParenthesizedExpression()
+    |LOOKAHEAD(3)TupleExpression()
+    |LetExpression()
+    |IfExpression()
+    |ForExpression()
+    |ForallExpression()
+    |Identifier()
+    |LOOKAHEAD(3)EnumConstantExpression()
+    |LOOKAHEAD(3)NewExpression()
+    |LOOKAHEAD(3)QueryExpression()
+    |LOOKAHEAD(3)UnaryExpression()
+    |LOOKAHEAD(3)ReduceExpression()
+    |LOOKAHEAD(3)ScanExpression()
+    |LOOKAHEAD(3)ModuleAccessExpression()
+    |LOOKAHEAD(3)TupleExpandExpression()
+    |LOOKAHEAD(3)MappedDomainExpression())
+    (
+     (":" Expression())
+    | ("[" (NamedExpression() ("," NamedExpression())*)? "]")
+    | ("(" (NamedExpression() ("," NamedExpression())*)? ")")
+    | (BinaryOperator() Expression())
+    | (
+        "."
+        (
+         (Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
+         |
+         (Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
+         | <LOCALE>
+         | <TYPE>
+         | Identifier()
+         )
+      )
+    )*
+}
+
+void MbTypeQueryExpression() :
+{}
+{
+TypeQueryExpression()
+|LOOKAHEAD(3)TupleExpression()
 |LetExpression()
 |IfExpression()
 |ForExpression()
 |ForallExpression()
+|LOOKAHEAD(3)EnumConstantExpression()
+|LiteralExpression()
+|LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)NewExpression()
+|LOOKAHEAD(3)QueryExpression()
+|LOOKAHEAD(3)UnaryExpression()
 |LOOKAHEAD(3)ReduceExpression()
 |LOOKAHEAD(3)ScanExpression()
 |LOOKAHEAD(3)ModuleAccessExpression()
 |LOOKAHEAD(3)TupleExpandExpression()
-//|LocaleQueryExpression()
-//|TypeQueryExpression()
 |LOOKAHEAD(3)MappedDomainExpression()
 }
+
+void MbLocaleQueryExpression() :
+{}
+{
+    LocaleQueryExpression()
+    | MbTypeQueryExpression()
+}
+
+void MbMemberAccessExpression() :
+{}
+{
+    MemberAccessExpression()
+    |MbParenthesizedExpression()
+}
+
+void MbParenthesizedExpression() :
+{}
+{
+    ParenthesizedExpression()
+    |MbLocaleQueryExpression()
+}
+
+
+
+
+
+void MbIteratableCallExpression() :
+{}
+{
+    IteratableCallExpression()
+    |MbMemberAccessExpression()
+}
+
+void MbCallExpression() :
+{}
+{
+    CallExpression()
+    |MbIteratableCallExpression()
+}
+
+void MbLvalueExpression() :
+{}
+{
+    LvalueExpression()
+    |MbCallExpression()
+}
+
+void MbCastExpression() :
+{}
+{
+    (Expression() ":" Expression())*
+    | MbBinaryExpression()
+}
+
+void MbBinaryExpression() :
+{}
+{
+    BinaryExpression()
+    |MbLvalueExpression()
+}
+
+
 
 void  TypeQueryExpression() :
 {}
@@ -1476,7 +1593,7 @@ void  BaseDomainType() :
 void  RectangularDomainType() :
 {}
 {
- <DOMAIN>"(" NamedExpressionList() ")"
+ <DOMAIN>"(" (NamedExpression() ("," NamedExpression())*) ")"
 }
 
 void  AssociativeDomainType() :
@@ -1488,7 +1605,7 @@ void  AssociativeDomainType() :
 void  AssociativeIndexType() :
 {}
 {
- TypeExpression()
+ Expression()
 }
 
 void  LocaleQueryExpression() :
@@ -1507,8 +1624,6 @@ void  TupleExpression() :
 {}
 {
  "(" TupleComponent() ("," TupleComponent())* [","] ")"
-//| LOOKAHEAD(3)"(" TupleComponent() "," TupleComponentList() ")"
-//| LOOKAHEAD(3)"(" TupleComponent() "," TupleComponentList() "," ")"
 }
 
 void  TupleComponentList() :
@@ -1611,7 +1726,7 @@ void  UnaryOperator() :
 void  CastExpression() :
 {}
 {
-   Expression() ":" TypeExpression()
+   Expression() ":" Expression()
 }
 
 void QueryExpression() :
@@ -1623,7 +1738,7 @@ void QueryExpression() :
 void  NewExpression() :
 {}
 {
-  <NEW> TypeExpression()"(" ArgumentList() ")"
+  <NEW> Expression()"(" ArgumentList() ")"
 }
 
 void  IteratableCallExpression() :
@@ -1687,36 +1802,37 @@ void  RangeExpression() :
 {}
 {
     Expression()
-//    |StridedRangeExpression()
-//    |CountedRangeExpression()
-//    |AlignedRangeExpression()
-//    |SlicedRangeExpression()
-}
-
-void  SlicedRangeExpression() :
-{}
-{
-    LOOKAHEAD(3)RangeExpression() "(" RangeExpression() ")"
-    |LOOKAHEAD(3)RangeExpression() "[" RangeExpression() "]"
-}
-
-void AlignedRangeExpression() :
-{}
-{
-    RangeExpression() <ALIGN> Expression()
+    (CountedRangeExpression()
+    |AlignedRangeExpression()
+    |SlicedRangeExpression()
+    |StridedRangeExpression())*
 }
 
 void  CountedRangeExpression() :
 {}
 {
-    RangeExpression() "#" Expression()
+    "#" Expression()
 }
 
 void  StridedRangeExpression() :
 {}
 {
-    RangeExpression() <BY> StepExpression()
+    <BY> StepExpression()
 }
+
+void  SlicedRangeExpression() :
+{}
+{
+    ("(" RangeExpression() ")")
+    | "[" RangeExpression() "]"
+}
+
+void AlignedRangeExpression() :
+{}
+{
+    <ALIGN> Expression()
+}
+
 
 void  StepExpression() :
 {}
