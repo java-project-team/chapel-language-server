@@ -16,128 +16,131 @@ var x = write();
 // Each thing is printed right next to the others, so include your spacing!
 //writeln("There are ", 3, " commas (\",\") in this line of code");
 //
-//// Different output channels:
+// Different output channels:
+write(1);
+stdout . write;
+stdout : write;
 //stdout.writeln("This goes to standard output, just like plain writeln() does");
-//stderr.writeln("This goes to standard error");
+////stderr.writeln("This goes to standard error");
+////
+////
+//// Variables don't have to be explicitly typed as long as
+//// the compiler can figure out the type that it will hold.
+//// 10 is an int, so myVar is implicitly an int
+//var myVar = 10;
+//myVar = -10;
+//var mySecondVar = myVar;
+//// var anError; would be a compile-time error.
 //
+//// We can (and should) explicitly type things.
+//var myThirdVar: real;
+//var myFourthVar: real = -1.234;
+//myThirdVar = myFourthVar;
 //
-// Variables don't have to be explicitly typed as long as
-// the compiler can figure out the type that it will hold.
-// 10 is an int, so myVar is implicitly an int
-var myVar = 10;
-myVar = -10;
-var mySecondVar = myVar;
-// var anError; would be a compile-time error.
-
-// We can (and should) explicitly type things.
-var myThirdVar: real;
-var myFourthVar: real = -1.234;
-myThirdVar = myFourthVar;
-
-//// Types
+////// Types
+////
+////// There are a number of basic types.
+//var myInt: int = -1000; // Signed ints
+//var myUint: uint = 1234; // Unsigned ints
+//var myReal: real = 9.876; // Floating point numbers
+//var myImag: imag = 5.0i; // Imaginary numbers
+////var myCplx: complex = 10 + 9i; // Complex numbers
+////myCplx = myInt + myImag; // Another way to form complex numbers
+//var myBool: bool = false; // Booleans
+////var myStr: string = "Some string..."; // Strings
+////var singleQuoteStr = 'Another string...'; // String literal with single quotes
+////
+//// Some types can have sizes.
+//var my8Int: int(8) = 10; // 8 bit (one byte) sized int;
+//var my64Real: real(64) = 1.516; // 64 bit (8 bytes) sized real
+////
+////// Typecasting.
+////var intFromReal = myReal : int;
+////var intFromReal2: int = myReal : int;
+////
+//// Type aliasing.
+//type chroma = int;        // Type of a single hue
+//type RGBColor = 3*chroma; // Type representing a full color
+//var black: RGBColor = (0, 0, 0);
+//var white: RGBColor = (255, 255, 255);
 //
-//// There are a number of basic types.
-var myInt: int = -1000; // Signed ints
-var myUint: uint = 1234; // Unsigned ints
-var myReal: real = 9.876; // Floating point numbers
-var myImag: imag = 5.0i; // Imaginary numbers
-//var myCplx: complex = 10 + 9i; // Complex numbers
-//myCplx = myInt + myImag; // Another way to form complex numbers
-var myBool: bool = false; // Booleans
-//var myStr: string = "Some string..."; // Strings
-//var singleQuoteStr = 'Another string...'; // String literal with single quotes
+//// Constants and Parameters
 //
-// Some types can have sizes.
-var my8Int: int(8) = 10; // 8 bit (one byte) sized int;
-var my64Real: real(64) = 1.516; // 64 bit (8 bytes) sized real
+//// A const is a constant, and cannot be changed after set in runtime.
+////const almostPi: real = 22.0/7.0;
 //
-//// Typecasting.
-//var intFromReal = myReal : int;
-//var intFromReal2: int = myReal : int;
+//// A param is a constant whose value must be known statically at
+//// compile-time.
+//param compileTimeConst: int = 16;
+////
+//// The config modifier allows values to be set at the command line.
+//// Set with --varCmdLineArg=Value or --varCmdLineArg Value at runtime.
+//config var varCmdLineArg: int = -123;
+//config const constCmdLineArg: int = 777;
 //
-// Type aliasing.
-type chroma = int;        // Type of a single hue
-type RGBColor = 3*chroma; // Type representing a full color
-var black: RGBColor = (0, 0, 0);
-var white: RGBColor = (255, 255, 255);
-
-// Constants and Parameters
-
-// A const is a constant, and cannot be changed after set in runtime.
-//const almostPi: real = 22.0/7.0;
-
-// A param is a constant whose value must be known statically at
-// compile-time.
-param compileTimeConst: int = 16;
+//// config param can be set at compile-time.
+//// Set with --set paramCmdLineArg=value at compile-time.
+//config param paramCmdLineArg: bool = false;
+////writeln(varCmdLineArg, ", ", constCmdLineArg, ", ", paramCmdLineArg);
 //
-// The config modifier allows values to be set at the command line.
-// Set with --varCmdLineArg=Value or --varCmdLineArg Value at runtime.
-config var varCmdLineArg: int = -123;
-config const constCmdLineArg: int = 777;
-
-// config param can be set at compile-time.
-// Set with --set paramCmdLineArg=value at compile-time.
-config param paramCmdLineArg: bool = false;
-//writeln(varCmdLineArg, ", ", constCmdLineArg, ", ", paramCmdLineArg);
-
-// References
+//// References
+////
+//// ref operates much like a reference in C++. In Chapel, a ref cannot
+//// be made to alias a variable other than the variable it is initialized with.
+//// Here, refToActual refers to actual.
+//var actual = 10;
+//ref refToActual = actual;
+////writeln(actual, " == ", refToActual); // prints the same value
+//actual = -123; // modify actual (which refToActual refers to)
+////writeln(actual, " == ", refToActual); // prints the same value
+//refToActual = 99999999; // modify what refToActual refers to (which is actual)
+////writeln(actual, " == ", refToActual); // prints the same value
+////
+//// Operators
 //
-// ref operates much like a reference in C++. In Chapel, a ref cannot
-// be made to alias a variable other than the variable it is initialized with.
-// Here, refToActual refers to actual.
-var actual = 10;
-ref refToActual = actual;
-//writeln(actual, " == ", refToActual); // prints the same value
-actual = -123; // modify actual (which refToActual refers to)
-//writeln(actual, " == ", refToActual); // prints the same value
-refToActual = 99999999; // modify what refToActual refers to (which is actual)
-//writeln(actual, " == ", refToActual); // prints the same value
+//// Math operators:
+//var a: int, thisInt = 1234, thatInt = 5678;
+////a = thisInt + thatInt;  // Addition
+////a = thisInt * thatInt;  // Multiplication
+////a = thisInt - thatInt;  // Subtraction
+////a = thisInt / thatInt;  // Division
+////a = thisInt ** thatInt; // Exponentiation
+////a = thisInt % thatInt;  // Remainder (modulo)
 //
-// Operators
-
-// Math operators:
-var a: int, thisInt = 1234, thatInt = 5678;
-//a = thisInt + thatInt;  // Addition
-//a = thisInt * thatInt;  // Multiplication
-//a = thisInt - thatInt;  // Subtraction
-//a = thisInt / thatInt;  // Division
-//a = thisInt ** thatInt; // Exponentiation
-//a = thisInt % thatInt;  // Remainder (modulo)
-
-// Logical operators:
-var b: bool, thisBool = false, thatBool = true;
-//b = thisBool && thatBool; // Logical and
-//b = thisBool || thatBool; // Logical or
-b = !thisBool;            // Logical negation
-
-//// Relational operators:
-//b = thisInt > thatInt;           // Greater-than
-//b = thisInt >= thatInt;          // Greater-than-or-equal-to
-//b = thisInt < a && a <= thatInt; // Less-than, and, less-than-or-equal-to
-//b = thisInt != thatInt;          // Not-equal-to
-//b = thisInt == thatInt;          // Equal-to
-
-// Bitwise operators:
-//a = thisInt << 10;     // Left-bit-shift by 10 bits;
-//a = thatInt >> 5;      // Right-bit-shift by 5 bits;
-a = ~thisInt;          // Bitwise-negation
-//a = thisInt ^ thatInt; // Bitwise exclusive-or
-
-// Compound assignment operators:
-a += thisInt;          // Addition-equals (a = a + thisInt;)
-a *= thatInt;          // Times-equals (a = a * thatInt;)
-b &&= thatBool;        // Logical-and-equals (b = b && thatBool;)
-a <<= 3;               // Left-bit-shift-equals (a = a << 10;)
-
-// Unlike other C family languages, there are no
-// pre/post-increment/decrement operators, such as:
+//// Logical operators:
+//var b: bool, thisBool = false, thatBool = true;
+////b = thisBool && thatBool; // Logical and
+////b = thisBool || thatBool; // Logical or
+//b = !thisBool;            // Logical negation
 //
-// ++j, --j, j++, j--
-
-// Swap operator:
-var old_this = thisInt;
-var old_that = thatInt;
-thisInt <=> thatInt; // Swap the values of thisInt and thatInt
+////// Relational operators:
+////b = thisInt > thatInt;           // Greater-than
+////b = thisInt >= thatInt;          // Greater-than-or-equal-to
+////b = thisInt < a && a <= thatInt; // Less-than, and, less-than-or-equal-to
+////b = thisInt != thatInt;          // Not-equal-to
+////b = thisInt == thatInt;          // Equal-to
+//
+//// Bitwise operators:
+////a = thisInt << 10;     // Left-bit-shift by 10 bits;
+////a = thatInt >> 5;      // Right-bit-shift by 5 bits;
+//a = ~thisInt;          // Bitwise-negation
+////a = thisInt ^ thatInt; // Bitwise exclusive-or
+//
+//// Compound assignment operators:
+//a += thisInt;          // Addition-equals (a = a + thisInt;)
+//a *= thatInt;          // Times-equals (a = a * thatInt;)
+//b &&= thatBool;        // Logical-and-equals (b = b && thatBool;)
+//a <<= 3;               // Left-bit-shift-equals (a = a << 10;)
+//
+//// Unlike other C family languages, there are no
+//// pre/post-increment/decrement operators, such as:
+////
+//// ++j, --j, j++, j--
+//
+//// Swap operator:
+//var old_this = thisInt;
+//var old_that = thatInt;
+//thisInt <=> thatInt; // Swap the values of thisInt and thatInt
 //writeln((old_this == thatInt) && (old_that == thisInt));
 //
 // Operator overloads can also be defined, as we'll see with procedures.

@@ -45,7 +45,7 @@ TOKEN : {
        <DECIMAL_LITERAL> "i"
        | <REAL_LITERAL> "i">
 |<REAL_LITERAL :
-    ((<DECIMAL_LITERAL>)? "." (["0"-"9", "_"])* (<EXPONENT_PART>)?)
+    ((<DECIMAL_LITERAL>)? "." (["0"-"9", "_"])+ (<EXPONENT_PART>)?)
     | (<DECIMAL_LITERAL> (".")? <EXPONENT_PART>)
     | ((<HEX_LITERAL> )? "." <HEX_LITERAL> (<PEXPONENT_PART>)?)
     | ((<HEX_LITERAL> )? "." <HEX_LITERAL>  (<PEXPONENT_PART>)?)
@@ -131,7 +131,7 @@ TOKEN :
 | < MINUSMINUS: "--" >
 | < TILDE: "~" >
 | < NOT: "!" >
-| < DOT: "." >
+| < DOT: ["."] >
 | < POINTERTO: "->" >
 | < DOTSTAR: ".*" >
 | < ARROWSTAR: "->*" >
@@ -1404,19 +1404,18 @@ void MbTypeExpression() :
     |LOOKAHEAD(3)TupleExpandExpression()
     |LOOKAHEAD(3)MappedDomainExpression())
     (
-     (":" Expression())
+     (<COLON> Expression())
     | ("[" (NamedExpression() ("," NamedExpression())*)? "]")
-    | ("(" (NamedExpression() ("," NamedExpression())*)? ")")
     | (BinaryOperator() Expression())
+    | ("(" (NamedExpression() ("," NamedExpression())*)? ")")
     | (
-        "."
+        <DOT>
         (
-         (Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
-         |
-         (Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
+         Identifier()
          | <LOCALE>
          | <TYPE>
-         | Identifier()
+         | (Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
+         | (Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
          )
       )
     )*
@@ -1670,8 +1669,7 @@ void  ScanExpression() :
 void  IfExpression() :
 {}
 {
-LOOKAHEAD(3)<IF> Expression() <THEN> Expression() <ELSE> Expression()
-| LOOKAHEAD(3)<IF> Expression() <THEN> Expression()
+<IF> Expression() <THEN> Expression() [<ELSE> Expression()]
 }
 
 void  ForExpression() :
