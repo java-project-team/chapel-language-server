@@ -177,40 +177,57 @@ writeln((a,b,thisInt,thatInt,thisBool,thatBool));
 // Control Flow
 
 // if - then - else works just like any other C-family language.
-if 10 < 100 then x
+x = if 10 < 100 then 10 else 15;
+
 //  writeln("All is well");
 
-//if -1 < 1 then
+if -1 < 1 then
+    getfuck();
 //  writeln("Continuing to believe reality");
-//else
+else
+    borrow;
 //  writeln("Send mathematician, something is wrong");
 
-//// You can use parentheses if you prefer.
-//if (10 > 100) {
+// You can use parentheses if you prefer.
+if (10 > 100) {
+    write(x);
 //  writeln("Universe broken. Please reboot universe.");
-//}
+}
 //
-//if a % 2 == 0 {
+if a % 2 == 0 {
+    write(x);
 //  writeln(a, " is even.");
-//} else {
+} else {
+    write(y);
 //  writeln(a, " is odd.");
-//}
+}
 //
-//if a % 3 == 0 {
+if a % 3 == 0 {
+    write(y);
 //  writeln(a, " is even divisible by 3.");
-//} else if a % 3 == 1 {
+} else if a % 3 == 1 {
+    write(y);
 //  writeln(a, " is divided by 3 with a remainder of 1.");
-//} else {
+} else {
+    write(y);
 //  writeln(b, " is divided by 3 with a remainder of 2.");
-//}
+}
 //
-//// Ternary: if - then - else in a statement.
-//var maximum = if thisInt < thatInt then thatInt else thisInt;
-//
-//// select statements are much like switch statements in other languages.
-//// However, select statements do not cascade like in C or Java.
+// Ternary: if - then - else in a statement.
+var maximum = if thisInt < thatInt then thatInt else thisInt;
+
+// select statements are much like switch statements in other languages.
+// However, select statements do not cascade like in C or Java.
 //var inputOption = "anOption";
-//select inputOption {
+var inputOption = 0;
+select inputOption {
+    when anOption do write(x);
+    when otherOption {
+        write(y);
+    }
+    otherwise {
+        fuck_you();
+    }
 //  when "anOption" do writeln("Chose 'anOption'");
 //  when "otherOption" {
 //    writeln("Chose 'otherOption'");
@@ -220,235 +237,241 @@ if 10 < 100 then x
 //    writeln("Any other Input");
 //    writeln("the otherwise case does not need a do if the body is one line");
 //  }
-//}
+}
 //
-//// while and do-while loops also behave like their C counterparts.
-//var j: int = 1;
-//var jSum: int = 0;
-//while (j <= 1000) {
-//  jSum += j;
-//  j += 1;
-//}
-//writeln(jSum);
-//
-//do {
-//  jSum += j;
-//  j += 1;
-//} while (j <= 10000);
-//writeln(jSum);
-//
-//// for loops are much like those in Python in that they iterate over a
-//// range. Ranges (like the 1..10 expression below) are a first-class object
-//// in Chapel, and as such can be stored in variables.
-//for i in 1..10 do write(i, ", ");
-//writeln();
-//
-//var iSum: int = 0;
-//for i in 1..1000 {
-//  iSum += i;
-//}
-//writeln(iSum);
-//
-//for x in 1..10 {
-//  for y in 1..10 {
+// while and do-while loops also behave like their C counterparts.
+var j: int = 1;
+var jSum: int = 0;
+while (j <= 1000) {
+  jSum += j;
+  j += 1;
+}
+writeln(jSum);
+
+do {
+  jSum += j;
+  j += 1;
+} while (j <= 10000);
+writeln(jSum);
+
+// for loops are much like those in Python in that they iterate over a
+// range. Ranges (like the 1..10 expression below) are a first-class object
+// in Chapel, and as such can be stored in variables.
+for i in 1..10 do write(i);
+writeln();
+
+var iSum: int = 0;
+for i in 1..1000 {
+  iSum += i;
+}
+writeln(iSum);
+
+for x in 1..10 {
+  for y in 1..10 {
 //    write((x,y), "\t");
-//  }
-//  writeln();
-//}
-//
-//// Ranges and Domains
-//
-//// For-loops and arrays both use ranges and domains to define an index set that
-//// can be iterated over. Ranges are single dimensional integer indices, while
-//// domains can be multi-dimensional and represent indices of different types.
-//
-//// They are first-class citizen types, and can be assigned into variables.
-//var range1to10: range = 1..10;  // 1, 2, 3, ..., 10
-//var range2to11 = 2..11; // 2, 3, 4, ..., 11
-//var rangeThisToThat: range = thisInt..thatInt; // using variables
-//var rangeEmpty: range = 100..-100; // this is valid but contains no indices
-//
-//// Ranges can be unbounded.
-//var range1toInf: range(boundedType=BoundedRangeType.boundedLow) = 1.. ; // 1, 2, 3, 4, 5, ...
-//var rangeNegInfTo1 = ..1; // ..., -4, -3, -2, -1, 0, 1
-//
-//// Ranges can be strided (and reversed) using the by operator.
-//var range2to10by2: range(stridable=true) = 2..10 by 2; // 2, 4, 6, 8, 10
-//var reverse2to10by2 = 2..10 by -2; // 10, 8, 6, 4, 2
-//
-//var trapRange = 10..1 by -1; // Do not be fooled, this is still an empty range
+    write((x,y));
+  }
+  writeln();
+}
+
+// Ranges and Domains
+
+// For-loops and arrays both use ranges and domains to define an index set that
+// can be iterated over. Ranges are single dimensional integer indices, while
+// domains can be multi-dimensional and represent indices of different types.
+var ten: int = 10;
+// They are first-class citizen types, and can be assigned into variables.
+var range1to10: range = 1..10;  // 1, 2, 3, ..., 10
+var range2to11 = 2..11; // 2, 3, 4, ..., 11
+var rangeThisToThat: range = thisInt..thatInt; // using variables
+var rangeEmpty: range = 100..-100; // this is valid but contains no indices
+
+// Ranges can be unbounded.
+var range1toInf: range(boundedType=BoundedRangeType.boundedLow) = 1.. ; // 1, 2, 3, 4, 5, ...
+var rangeNegInfTo1 = ..1; // ..., -4, -3, -2, -1, 0, 1
+
+// Ranges can be strided (and reversed) using the by operator.
+var range2to10by2: range(stridable=true) = 2..10 by 2; // 2, 4, 6, 8, 10
+var reverse2to10by2 = 2..10 by -2; // 10, 8, 6, 4, 2
+
+var trapRange = 10..1 by -1; // Do not be fooled, this is still an empty range
 //writeln("Size of range ", trapRange, " = ", trapRange.length);
-//
-//// Note: range(boundedType= ...) and range(stridable= ...) are only
-//// necessary if we explicitly type the variable.
-//
-//// The end point of a range can be determined using the count (#) operator.
-//var rangeCount: range = -5..#12; // range from -5 to 6
-//
-//// Operators can be mixed.
-//var rangeCountBy: range(stridable=true) = -5..#12 by 2; // -5, -3, -1, 1, 3, 5
-//writeln(rangeCountBy);
-//
-//// Properties of the range can be queried.
-//// In this example, printing the first index, last index, number of indices,
-//// stride, and if 2 is include in the range.
-//writeln((rangeCountBy.first, rangeCountBy.last, rangeCountBy.length,
-//           rangeCountBy.stride, rangeCountBy.member(2)));
-//
-//for i in rangeCountBy {
-//  write(i, if i == rangeCountBy.last then "\n" else ", ");
-//}
-//
-//// Rectangular domains are defined using the same range syntax,
-//// but they are required to be bounded (unlike ranges).
-//var domain1to10: domain(1) = {1..10};        // 1D domain from 1..10;
-//var twoDimensions: domain(2) = {-2..2,0..2}; // 2D domain over product of ranges
-//var thirdDim: range = 1..16;
-//var threeDims: domain(3) = {thirdDim, 1..10, 5..10}; // using a range variable
-//
-//// Domains can also be resized
-//var resizedDom = {1..10};
+
+// Note: range(boundedType= ...) and range(stridable= ...) are only
+// necessary if we explicitly type the variable.
+
+// The end point of a range can be determined using the count (#) operator.
+var rangeCount: range = -5..#12; // range from -5 to 6
+
+// Operators can be mixed.
+var rangeCountBy: range(stridable=true) = -5..#12 by 2; // -5, -3, -1, 1, 3, 5
+writeln(rangeCountBy);
+
+// Properties of the range can be queried.
+// In this example, printing the first index, last index, number of indices,
+// stride, and if 2 is include in the range.
+writeln((rangeCountBy.first, rangeCountBy.last, rangeCountBy.length,
+           rangeCountBy.stride, rangeCountBy.member(2)));
+
+for i in rangeCountBy {
+  write(i, if i == rangeCountBy.last then /*"\n" else ", "*/ x);
+}
+
+// Rectangular domains are defined using the same range syntax,
+// but they are required to be bounded (unlike ranges).
+var domain1to10: domain(1) = {1..10};        // 1D domain from 1..10;
+var twoDimensions: domain(2) = {-2..2,0..2}; // 2D domain over product of ranges
+var thirdDim: range = 1..16;
+var threeDims: domain(3) = {thirdDim, 1..10, 5..10}; // using a range variable
+
+// Domains can also be resized
+var resizedDom = {1..10};
 //writeln("before, resizedDom = ", resizedDom);
-//resizedDom = {-10..#10};
+resizedDom = {-10..#10};
 //writeln("after, resizedDom = ", resizedDom);
-//
-//// Indices can be iterated over as tuples.
-//for idx in twoDimensions do
+
+// Indices can be iterated over as tuples.
+for idx in twoDimensions do
 //  write(idx, ", ");
-//writeln();
-//
-//// These tuples can also be deconstructed.
-//for (x,y) in twoDimensions {
+        write(idx);
+writeln();
+
+// These tuples can also be deconstructed.
+for (x,y) in twoDimensions {
 //  write("(", x, ", ", y, ")", ", ");
-//}
-//writeln();
-//
-//// Associative domains act like sets.
-//var stringSet: domain(string); // empty set of strings
+    write(x);
+}
+writeln();
+
+// Associative domains act like sets.
+var stringSet: domain(string); // empty set of strings
 //stringSet += "a";
 //stringSet += "b";
 //stringSet += "c";
 //stringSet += "a"; // Redundant add "a"
 //stringSet -= "c"; // Remove "c"
-//writeln(stringSet.sorted());
+writeln(stringSet.sorted());
+
+// Associative domains can also have a literal syntax
+var intSet = {1, 2, 4, 5, 100};
+
+// Both ranges and domains can be sliced to produce a range or domain with the
+// intersection of indices.
+var rangeA = 1.. ; // range from 1 to infinity
+var rangeB =  ..5; // range from negative infinity to 5
+var rangeC = rangeA[rangeB]; // resulting range is 1..5
+writeln((rangeA, rangeB, rangeC));
+
+var domainA = {1..10, 5..20};
+var domainB = {-5..5, 1..10};
+var domainC = domainA[domainB];
+writeln((domainA, domainB, domainC));
+
+// Arrays
+
+// Arrays are similar to those of other languages.
+// Their sizes are defined using domains that represent their indices.
+var intArray: [1..10] int;
+var intArray2: [{1..10}] int; // equivalent
 //
-//// Associative domains can also have a literal syntax
-//var intSet = {1, 2, 4, 5, 100};
+// They can be accessed using either brackets or parentheses
+for i in 1..10 do
+  intArray[i] = -i;
+writeln(intArray);
+
+// We cannot access intArray[0] because it exists outside
+// of the index set, {1..10}, we defined it to have.
+// intArray[11] is illegal for the same reason.
+var realDomain: domain(2) = {1..5,1..7};
+var realArray: [realDomain] real;
+var realArray2: [1..5,1..7] real;   // equivalent
+var realArray3: [{1..5,1..7}] real; // equivalent
+
+for i in 1..5 {
+  for j in realDomain.dim(2) {   // Only use the 2nd dimension of the domain
+    realArray[i,j] = -1.61803 * i + 0.5 * j;  // Access using index list
+    var idx: 2*int = (i,j);                   // Note: 'index' is a keyword
+    realArray[idx] = - realArray[(i,j)];      // Index using tuples
+  }
+}
+for i in d + 5 {
+
+}
+// Arrays have domains as members, and can be iterated over as normal.
+for idx in realArray.domain {  // Again, idx is a 2*int tuple
+  realArray[idx] = 1 / realArray[idx[1], idx[2]]; // Access by tuple and list
+}
+
+writeln(realArray);
 //
-//// Both ranges and domains can be sliced to produce a range or domain with the
-//// intersection of indices.
-//var rangeA = 1.. ; // range from 1 to infinity
-//var rangeB =  ..5; // range from negative infinity to 5
-//var rangeC = rangeA[rangeB]; // resulting range is 1..5
-//writeln((rangeA, rangeB, rangeC));
-//
-//var domainA = {1..10, 5..20};
-//var domainB = {-5..5, 1..10};
-//var domainC = domainA[domainB];
-//writeln((domainA, domainB, domainC));
-//
-//// Arrays
-//
-//// Arrays are similar to those of other languages.
-//// Their sizes are defined using domains that represent their indices.
-//var intArray: [1..10] int;
-//var intArray2: [{1..10}] int; // equivalent
-//
-//// They can be accessed using either brackets or parentheses
-//for i in 1..10 do
-//  intArray[i] = -i;
-//writeln(intArray);
-//
-//// We cannot access intArray[0] because it exists outside
-//// of the index set, {1..10}, we defined it to have.
-//// intArray[11] is illegal for the same reason.
-//var realDomain: domain(2) = {1..5,1..7};
-//var realArray: [realDomain] real;
-//var realArray2: [1..5,1..7] real;   // equivalent
-//var realArray3: [{1..5,1..7}] real; // equivalent
-//
-//for i in 1..5 {
-//  for j in realDomain.dim(2) {   // Only use the 2nd dimension of the domain
-//    realArray[i,j] = -1.61803 * i + 0.5 * j;  // Access using index list
-//    var idx: 2*int = (i,j);                   // Note: 'index' is a keyword
-//    realArray[idx] = - realArray[(i,j)];      // Index using tuples
-//  }
-//}
-//
-//// Arrays have domains as members, and can be iterated over as normal.
-//for idx in realArray.domain {  // Again, idx is a 2*int tuple
-//  realArray[idx] = 1 / realArray[idx[1], idx[2]]; // Access by tuple and list
-//}
-//
-//writeln(realArray);
-//
-//// The values of an array can also be iterated directly.
-//var rSum: real = 0;
-//for value in realArray {
-//  rSum += value; // Read a value
-//  value = rSum;  // Write a value
-//}
+// The values of an array can also be iterated directly.
+var rSum: real = 0;
+for value in realArray {
+  rSum += value; // Read a value
+  value = rSum;  // Write a value
+}
 //writeln(rSum, "\n", realArray);
 //
 //// Associative arrays (dictionaries) can be created using associative domains.
 //var dictDomain: domain(string) = { "one", "two" };
 //var dict: [dictDomain] int = ["one" => 1, "two" => 2];
 //dict["three"] = 3; // Adds 'three' to 'dictDomain' implicitly
-//for key in dictDomain.sorted() do
-//  writeln(dict[key]);
-//
-//// Arrays can be assigned to each other in a few different ways.
-//// These arrays will be used in the example.
-//var thisArray : [0..5] int = [0,1,2,3,4,5];
-//var thatArray : [0..5] int;
-//
-//// First, simply assign one to the other. This copies thisArray into
-//// thatArray, instead of just creating a reference. Therefore, modifying
-//// thisArray does not also modify thatArray.
-//
-//thatArray = thisArray;
-//thatArray[1] = -1;
-//writeln((thisArray, thatArray));
-//
-//// Assign a slice from one array to a slice (of the same size) in the other.
-//thatArray[4..5] = thisArray[1..2];
-//writeln((thisArray, thatArray));
-//
-//// Operations can also be promoted to work on arrays. 'thisPlusThat' is also
-//// an array.
-//var thisPlusThat = thisArray + thatArray;
-//writeln(thisPlusThat);
-//
-//// Moving on, arrays and loops can also be expressions, where the loop
-//// body expression is the result of each iteration.
-//var arrayFromLoop = for i in 1..10 do i;
-//writeln(arrayFromLoop);
-//
-//// An expression can result in nothing, such as when filtering with an if-expression.
-//var evensOrFives = for i in 1..10 do if (i % 2 == 0 || i % 5 == 0) then i;
-//
-//writeln(arrayFromLoop);
-//
-//// Array expressions can also be written with a bracket notation.
-//// Note: this syntax uses the forall parallel concept discussed later.
-//var evensOrFivesAgain = [i in 1..10] if (i % 2 == 0 || i % 5 == 0) then i;
-//
-//// They can also be written over the values of the array.
-//arrayFromLoop = [value in arrayFromLoop] value + 1;
-//
-//
-//// Procedures
-//
-//// Chapel procedures have similar syntax functions in other languages.
-//proc fibonacci(n : int) : int {
-//  if n <= 1 then return n;
-//  return fibonacci(n-1) + fibonacci(n-2);
-//}
-//
-//// Input parameters can be untyped to create a generic procedure.
-//proc doublePrint(thing): void {
+dict[3] = 3;
+for key in dictDomain.sorted() do
+  writeln(dict[key]);
+[1,2,3,4];
+// Arrays can be assigned to each other in a few different ways.
+// These arrays will be used in the example.
+var thisArray : [0..5] int = [0,1,2,3,4,5];
+var thatArray : [0..5] int;
+
+// First, simply assign one to the other. This copies thisArray into
+// thatArray, instead of just creating a reference. Therefore, modifying
+// thisArray does not also modify thatArray.
+
+thatArray = thisArray;
+thatArray[1] = -1;
+writeln((thisArray, thatArray));
+
+// Assign a slice from one array to a slice (of the same size) in the other.
+thatArray[4..5] = thisArray[1..2];
+writeln((thisArray, thatArray));
+
+// Operations can also be promoted to work on arrays. 'thisPlusThat' is also
+// an array.
+var thisPlusThat = thisArray + thatArray;
+writeln(thisPlusThat);
+
+// Moving on, arrays and loops can also be expressions, where the loop
+// body expression is the result of each iteration.
+var arrayFromLoop = for i in 1..10 do i;
+writeln(arrayFromLoop);
+
+// An expression can result in nothing, such as when filtering with an if-expression.
+var evensOrFives = for i in 1..10 do if (i % 2 == 0 || i % 5 == 0) then i;
+
+writeln(arrayFromLoop);
+
+// Array expressions can also be written with a bracket notation.
+// Note: this syntax uses the forall parallel concept discussed later.
+var evensOrFivesAgain = [i in 1..10] if (i % 2 == 0 || i % 5 == 0) then i;
+
+// They can also be written over the values of the array.
+arrayFromLoop = [value in arrayFromLoop] value + 1;
+
+
+// Procedures
+
+// Chapel procedures have similar syntax functions in other languages.
+proc fibonacci(n : int) : int {
+  if n <= 1 then return n;
+  return fibonacci(n-1) + fibonacci(n-2);
+}
+
+// Input parameters can be untyped to create a generic procedure.
+proc doublePrint(thing): void {
 //  write(thing, " ", thing, "\n");
-//}
+}
 //
 //// The return type can be inferred, as long as the compiler can figure it out.
 //proc addThree(n) {

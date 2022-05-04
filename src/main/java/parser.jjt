@@ -265,7 +265,7 @@ SimpleNode File() :
 void ArrayLiteral() :
 {}
 {
-    LOOKAHEAD(3)("[" Expression() ("," Expression())* "]")
+    ("[" ExpressionList() "]")
     |
     LOOKAHEAD(3)("[" AssociativeExpr() ("," AssociativeExpr() )* "]")
 }
@@ -279,7 +279,8 @@ void AssociativeExpr() :
 void RangeLiteral() :
 {}
 {
-    [Expression() ] <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
+//    [Expression() ] <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
+    <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
 }
 
 void Block() :
@@ -300,13 +301,13 @@ void Statement() :
     LOOKAHEAD(3)BlockStatement()
     | LOOKAHEAD(3)IfStatement()
 //    | LOOKAHEAD(3)SwapStatement()
-    | LOOKAHEAD(3)ExpressionStatement()
-//    |  LOOKAHEAD(3)IoStatement()
+    |  LOOKAHEAD(3)ForStatement()
     |  LOOKAHEAD(3)SelectStatement()
     |  LOOKAHEAD(3)WhileDoStatement()
     |  LOOKAHEAD(3)DoWhileStatement()
-    |  LOOKAHEAD(3)ForStatement()
     |  LOOKAHEAD(3)LabelStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
+//    |  LOOKAHEAD(3)IoStatement()
     |  LOOKAHEAD(3)BreakStatement()
     |  LOOKAHEAD(3)ContinueStatement()
     |  LOOKAHEAD(3)ParamForStatement()
@@ -365,9 +366,9 @@ void SelectStatement() :
 {
     <SELECT> Expression() "{"
     (
-    <WHEN> (LOOKAHEAD(2)Expression())+ (<DO> Statement() | BlockStatement())
-    | <OTHERWISE> (LOOKAHEAD(3)Statement() | LOOKAHEAD(3)<DO> Statement())
-    )
+    (<WHEN> Expression() ("," Expression())* ((<DO> Statement()) | BlockStatement()))
+    | (<OTHERWISE> (Statement() | (<DO> Statement() )))
+    )*
     "}"
 }
 void CTRLDecl() :
@@ -392,13 +393,17 @@ void DoWhileStatement() :
 void ForStatement() :
 {}
 {
-    <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr() (<DO> Statement() | BlockStatement())
+    <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr()
+    (
+    (<DO> Statement())
+    | BlockStatement()
+    )
 }
 
 void IterableExpr() :
 {}
 {
-    Expression() | <ZIP> "(" Expression() ("," Expression())* ")"
+    Expression() | (<ZIP> "(" ExpressionList() ")")
 }
 
 void LabelStatement() :
@@ -933,11 +938,12 @@ void  IteratableExpression() :
     |<ZIP> "(" ExpressionList() ")"
 }
 
-void ExpressionList() :
+void ExpressionList() #void:
 {}
 {
-    LOOKAHEAD(3)Expression() "," ExpressionList()
-    |LOOKAHEAD(3)Expression()
+    Expression() ("," Expression())*
+//    LOOKAHEAD(3)Expression() "," ExpressionList()
+//    |LOOKAHEAD(3)Expression()
 }
 
 void  IndexVarDeclaration() :
@@ -1189,8 +1195,8 @@ void  DataparallelType() :
  RangeType()
 |LOOKAHEAD(3)DomainType()
 |LOOKAHEAD(3)MappedDomainType()
-|ArrayType()
-|IndexType()
+|LOOKAHEAD(3)ArrayType()
+|LOOKAHEAD(3)IndexType()
 }
 
 void  MappedDomainType() :
@@ -1202,7 +1208,8 @@ void  MappedDomainType() :
 void  ArrayType() :
 {}
 {
- "[" DomainExpression() "]" Expression()
+// "[" DomainExpression() "]" Expression()
+    "[" (ExpressionList() | DomainExpression() )  "]" Expression()
 }
 
 void  IndexType() :
@@ -1214,7 +1221,7 @@ void  IndexType() :
 void  RangeType() :
 {}
 {
- <RANGE> "(" (NamedExpression() ("," NamedExpression())*) ")"
+ <RANGE> ("(" (NamedExpression() ("," NamedExpression())*) ")")?
 }
 
 void  StructuredType() :
@@ -1263,12 +1270,12 @@ void  PrimitiveType() :
 {
  <VOID>
 |<NOTHING>
-|<INT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
-|<BOOL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
-|<UINT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
-|<REAL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
-|<IMAG>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
-|<COMPLEX>[LOOKAHEAD(3)PrimitiveTypeParameterPart()]
+|(<INT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<BOOL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<UINT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<REAL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<IMAG>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<COMPLEX>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
 |<STRING>
 |<BYTES>
 |<ENUM>
@@ -1383,8 +1390,8 @@ void MbTypeExpression() :
 {}
 {
      (LOOKAHEAD(3)TupleType()
-    | LiteralExpression()
-    | DataparallelType()
+    | LOOKAHEAD(10)DataparallelType() // todo добавить typeexpr потому что тут иначе фигня творится
+    | LOOKAHEAD(10)LiteralExpression()
     | PrimitiveType()
     | SynchronizationType()
     | ParenthesizedExpression()
@@ -1414,10 +1421,12 @@ void MbTypeExpression() :
          Identifier()
          | <LOCALE>
          | <TYPE>
-         | (Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
-         | (Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
+         | LOOKAHEAD(3)<DOMAIN>
+         | LOOKAHEAD(3)(Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
+         | LOOKAHEAD(3)(Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
          )
       )
+    | (<RANGESPEC> ("<")? [LOOKAHEAD(2)Expression()])
     | ( AssignOperators() Expression() )
     | (<SWAP> Expression() )
     | (<IO> Expression() )
@@ -1529,9 +1538,15 @@ void  DmapValue() :
 void  DomainExpression() :
 {}
 {
-(DomainLiteral()
+ (DomainLiteral()
 |LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)DomainAssignmentExpression()) (DomainAlignmentExpression() | DomainStridingExpression() | DomainSliceExpression())
+|LOOKAHEAD(3)DomainAssignmentExpression())
+(
+  (<ALIGN> Expression())
+| (<BY> Expression())
+| ("[" SlicingIndexSet() "]")
+| ("(" SlicingIndexSet() ")")
+)*
 }
 
 void  DomainAlignmentExpression() :
@@ -1678,17 +1693,17 @@ void  IfExpression() :
 void  ForExpression() :
 {}
 {
-LOOKAHEAD(3)<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression()
-|LOOKAHEAD(3)<FOR> IteratableExpression() <DO> Expression()
+LOOKAHEAD(3)(<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression())
+|LOOKAHEAD(3)(<FOR> IteratableExpression() <DO> Expression())
 }
 
 void  ForallExpression() :
 {}
 {
- LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression()
-| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression()
-|LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression()
-|LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Expression()
+ LOOKAHEAD(3)(<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression())
+|LOOKAHEAD(3)(<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression())
+|LOOKAHEAD(3)("[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression())
+|LOOKAHEAD(3)("[" IteratableExpression() [TaskIntentClause()] "]" Expression())
 }
 
 void  LetExpression() :
@@ -1761,16 +1776,16 @@ void  LiteralExpression() :
 |LOOKAHEAD(3)RealLiteral()
 |LOOKAHEAD(3)ImaginaryLiteral()
 |LOOKAHEAD(3)IntegerLiteral()
+|LOOKAHEAD(3)RangeLiteral()
+|LOOKAHEAD(3)DomainLiteral()
+|ArrayLiteral()
 //|StringLiteral()
 //|BytesLiteral()
-//|LOOKAHEAD(3)RangeLiteral()
-//|LOOKAHEAD(3)DomainLiteral()
-//|ArrayLiteral()
 }
 void RealLiteral() : {} {<REAL_LITERAL> }
 void ImaginaryLiteral() : {} {<IMAGINARY_LITERAL> }
 //void StringLiteral() : {} {
-////<INTERPRETED_STRING_LITERAL>
+//<INTERPRETED_STRING_LITERAL>
 //}
 
 void  BoolLiteral() :
@@ -1789,7 +1804,10 @@ void  IntegerLiteral() :
 void  RectangularDomainLiteral() :
 {}
 {
- "{" RangeExpressionList() "}"
+ "{"
+// RangeExpressionList()
+  RangeExpression() ("," RangeExpression())*
+ "}"
 }
 
 void  RangeExpressionList() :
@@ -1802,11 +1820,11 @@ void  RangeExpressionList() :
 void  RangeExpression() :
 {}
 {
-    Expression()
-    (CountedRangeExpression()
+    CountedRangeExpression()
     |AlignedRangeExpression()
     |SlicedRangeExpression()
-    |StridedRangeExpression())*
+    |Expression()
+    |StridedRangeExpression()
 }
 
 void  CountedRangeExpression() :
@@ -1825,7 +1843,7 @@ void  SlicedRangeExpression() :
 {}
 {
     ("(" RangeExpression() ")")
-    | "[" RangeExpression() "]"
+    | ("[" RangeExpression() "]")
 }
 
 void AlignedRangeExpression() :
