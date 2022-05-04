@@ -298,11 +298,10 @@ void Statement() :
 {}
 {
     LOOKAHEAD(3)BlockStatement()
-    | LOOKAHEAD(3)ExpressionStatement()
     | LOOKAHEAD(3)IfStatement()
-    | LOOKAHEAD(3)AssignStatement()
-    | LOOKAHEAD(3)SwapStatement()
-    |  LOOKAHEAD(3)IoStatement()
+//    | LOOKAHEAD(3)SwapStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
+//    |  LOOKAHEAD(3)IoStatement()
     |  LOOKAHEAD(3)SelectStatement()
     |  LOOKAHEAD(3)WhileDoStatement()
     |  LOOKAHEAD(3)DoWhileStatement()
@@ -352,7 +351,7 @@ void IoStatement() :
 void IOExpr() :
 {}
 {
-    Expression() IOExprRR()
+    Expression() (<IO> Expression())+
 }
 
 void IOExprRR() :
@@ -801,10 +800,13 @@ void VariableDeclarationList() :
     |LOOKAHEAD(3)VariableDeclaration()
 }
 
+
+
 void VariableDeclaration() :
 {}
 {
-    Identifier() ("," Identifier())* [TypePart()] [InitializationPart()]
+    IdentifierList()
+    [TypePart()] [InitializationPart()]
 }
 
 void TypePart() :
@@ -822,10 +824,8 @@ void InitializationPart() :
 void IdentifierList() :
 {}
 {
-    LOOKAHEAD(3)Identifier() "," IdentifierList()
-    |LOOKAHEAD(3)Identifier()
-    |LOOKAHEAD(3)TupleGroupedIdentifierList() "," IdentifierList()
-    |LOOKAHEAD(3)TupleGroupedIdentifierList()
+    (Identifier() ("," Identifier())*)
+    | "(" IdentifierList() ")"
 }
 
 void TupleGroupedIdentifierList() :
@@ -1033,10 +1033,10 @@ void AssignStatement() :
 void LvalueExpression() :
 {}
 {
-LOOKAHEAD(3)Identifier()
+(LOOKAHEAD(3)Identifier()
 |LOOKAHEAD(3)MemberAccessExpression()
 //|LOOKAHEAD(3)CallExpression()
-|LOOKAHEAD(3)ParenthesizedExpression()
+|LOOKAHEAD(3)ParenthesizedExpression())
 ( ("[" (NamedExpression() ("," NamedExpression())*) "]") | ("(" (NamedExpression() ("," NamedExpression())*) ")") )*
 }
 //void  LvalueExpression() :
@@ -1418,6 +1418,9 @@ void MbTypeExpression() :
          | (Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
          )
       )
+    | ( AssignOperators() Expression() )
+    | (<SWAP> Expression() )
+    | (<IO> Expression() )
     )*
 }
 
