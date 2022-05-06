@@ -1,4 +1,4 @@
-package Lexer;
+package lexer;
 
 import java.io.IOException;
 import java.nio.file.*;
