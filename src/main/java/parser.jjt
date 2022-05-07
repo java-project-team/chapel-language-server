@@ -265,7 +265,7 @@ SimpleNode File() :
 void ArrayLiteral() :
 {}
 {
-    ("[" ExpressionList() "]")
+    ("[" ExpressionList() "]" [Expression()])
     |
     LOOKAHEAD(3)("[" AssociativeExpr() ("," AssociativeExpr() )* "]")
 }
@@ -1195,7 +1195,7 @@ void  DataparallelType() :
  RangeType()
 |LOOKAHEAD(3)DomainType()
 |LOOKAHEAD(3)MappedDomainType()
-|LOOKAHEAD(3)ArrayType()
+//|LOOKAHEAD(3)ArrayType()
 |LOOKAHEAD(3)IndexType()
 }
 
@@ -1209,7 +1209,7 @@ void  ArrayType() :
 {}
 {
 // "[" DomainExpression() "]" Expression()
-    "[" (ExpressionList() | DomainExpression() )  "]" Expression()
+    "[" (ExpressionList() | DomainExpression() )  "]" [Expression()]
 }
 
 void  IndexType() :
@@ -1385,12 +1385,12 @@ void Expression() :
 {
    MbTypeExpression()
 }
-
+//Нужно разбирать по контексту эррэй литерал, так как он в типах и выражениях немного разный
 void MbTypeExpression() :
 {}
 {
      (LOOKAHEAD(3)TupleType()
-    | LOOKAHEAD(10)DataparallelType() // todo добавить typeexpr потому что тут иначе фигня творится
+    | LOOKAHEAD(10)DataparallelType()
     | LOOKAHEAD(10)LiteralExpression()
     | PrimitiveType()
     | SynchronizationType()
@@ -1409,6 +1409,7 @@ void MbTypeExpression() :
     |LOOKAHEAD(3)ScanExpression()
     |LOOKAHEAD(3)ModuleAccessExpression()
     |LOOKAHEAD(3)TupleExpandExpression()
+    | DomainExpression()
     |LOOKAHEAD(3)MappedDomainExpression())
     (
      (<COLON> Expression())
@@ -1432,6 +1433,11 @@ void MbTypeExpression() :
     | (<IO> Expression() )
     )*
 }
+
+//void TypeExpression() : {}
+//{
+//
+//}
 
 void MbTypeQueryExpression() :
 {}
