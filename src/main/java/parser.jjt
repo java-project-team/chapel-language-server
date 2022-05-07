@@ -1390,8 +1390,8 @@ void MbTypeExpression() :
 {}
 {
      (LOOKAHEAD(3)TupleType()
-    | LOOKAHEAD(10)DataparallelType()
-    | LOOKAHEAD(10)LiteralExpression()
+    | LOOKAHEAD(3)DataparallelType()
+    | LOOKAHEAD(3)LiteralExpression()
     | PrimitiveType()
     | SynchronizationType()
     | ParenthesizedExpression()
