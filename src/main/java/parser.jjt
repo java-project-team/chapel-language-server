@@ -220,7 +220,7 @@ TOKEN :
 | < SUBDOMAIN : "subdomain" >
 | < SYNC : "sync" >
 | < THEN : "then" >
-| < THIS : "this" >
+//| < THIS : "this" > // todo что то придумать с ним
 | < THROW : "throw" >
 | < THROWS: "throws" >
 | < TRUE : "true" >
@@ -306,7 +306,6 @@ void Statement() :
     |  LOOKAHEAD(3)WhileDoStatement()
     |  LOOKAHEAD(3)DoWhileStatement()
     |  LOOKAHEAD(3)LabelStatement()
-    | LOOKAHEAD(3)ExpressionStatement()
 //    |  LOOKAHEAD(3)IoStatement()
     |  LOOKAHEAD(3)BreakStatement()
     |  LOOKAHEAD(3)ContinueStatement()
@@ -335,6 +334,7 @@ void Statement() :
     |  LOOKAHEAD(3)ForallStatement()
     |  LOOKAHEAD(3)DeleteStatement()
     |  LOOKAHEAD(3)ManageStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
 }
 
 void SwapStatement() :
@@ -526,7 +526,7 @@ void ProcedureDeclarationStatement() :
 {
     [PrivacySpecifier()]
     [ProcKind()]
-    (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> ArgumentList())
+    (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
     [LOOKAHEAD(3)ReturnIntent()]
     [ReturnType() ]
     [WhereClause() ] FunctionBody()
@@ -674,8 +674,7 @@ void  NamedExpression() :
 void ClassStatementList() :
 {}
 {
-    LOOKAHEAD(3)ClassStatement() ClassStatementList()
-    |LOOKAHEAD(3)ClassStatement()
+    ClassStatement() (ClassStatement())*
 }
 
 void ClassStatement() :
@@ -925,10 +924,8 @@ void  TaskPrivateVarKind() :
 void CoforallStatement() :
 {}
 {
- LOOKAHEAD(3)<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] <DO> Statement()
-|LOOKAHEAD(3)<COFORALL> IndexVarDeclaration() <IN> IteratableExpression()[TaskIntentClause()] BlockStatement()
-|LOOKAHEAD(3)<COFORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-|LOOKAHEAD(3)<COFORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+    <COFORALL> (IndexVarDeclaration() | IteratableExpression() )
+    [<IN> IteratableExpression()] [TaskIntentClause()] ((<DO> Statement()) | BlockStatement())
 }
 
 void  IteratableExpression() :
@@ -994,12 +991,18 @@ void  SingleType() :
 void  ForallStatement() :
 {}
 {
-  LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-| LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
-| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
-| LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
-| LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Statement()
+    (<FORALL> (IndexVarDeclaration() | IteratableExpression()) [<IN> IteratableExpression()] [TaskIntentClause()]
+     ((<DO> Statement()) | BlockStatement()) )
+    | ("[" (IndexVarDeclaration() | IteratableExpression())
+        [<IN> IteratableExpression()] [TaskIntentClause()] "]" Statement()
+        )
+
+//  LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+//| LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
+//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+//| LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
+//| LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Statement()
 }
 
 void  DeleteStatement() :
@@ -1760,7 +1763,7 @@ void QueryExpression() :
 void  NewExpression() :
 {}
 {
-  <NEW> Expression()"(" ArgumentList() ")"
+  <NEW> Expression()["(" ArgumentList() ")"]
 }
 
 void  IteratableCallExpression() :
@@ -1785,14 +1788,14 @@ void  LiteralExpression() :
 |LOOKAHEAD(3)RangeLiteral()
 |LOOKAHEAD(3)DomainLiteral()
 |ArrayLiteral()
-//|StringLiteral()
-//|BytesLiteral()
+|StringLiteral()
+|BytesLiteral()
 }
 void RealLiteral() : {} {<REAL_LITERAL> }
 void ImaginaryLiteral() : {} {<IMAGINARY_LITERAL> }
-//void StringLiteral() : {} {
-//<INTERPRETED_STRING_LITERAL>
-//}
+void StringLiteral() : {} {
+<STRING_LITERAL>
+}
 
 void  BoolLiteral() :
 {}
@@ -1891,29 +1894,23 @@ void  NonRangeExpression() :
  Expression()
 }
 
-//TOKEN : {
-//<BYTES_LITERAL : "B" ("\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? | "'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)?)>
-//| <UNINTERPRETED_STRING_LITERAL:
-//      "\"\"\"" ((~["\""] | "\"" "\"" ~["\""]))* "\"\"\""
-//      | "\'\'\'" (~["\'"])* "\'\'\'"
-//      >
-//| <INTERPRETED_STRING_LITERAL:
-//    "\"" (<DOUBLE_QUOTE_DELIMITED_CHARACTERS>)? "\""
-//    | "\'" (<SINGLE_QUOTE_DELIMITED_CHARACTERS>)? "\'"
-//    >
-//| <#DOUBLE_QUOTE_DELIMITED_CHARACTERS:
-//    (~["\"", "\n"])+
-//    >
-//| <SINGLE_QUOTE_DELIMITED_CHARACTERS:
-//    (~["\'", "\n"])+
-//    >
-//}
+//TODO
+TOKEN : {
+< STRING_LITERAL : ("\"" (~["\""]|("\\"~[]))* "\"")
+    | ("\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
+    | ("'" (~["'"]|("\\"~[]))* "'")
+    | ("'''" (~["'"]|("\\"~[]))* "'''")>
+|< BYTES_LITERAL : ("b\"" (~["\""]|("\\"~[]))* "\"")
+    | ("b\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
+    | ("b'" (~["'"]|("\\"~[]))* "'")
+    | ("b'''" (~["'"]|("\\"~[]))* "'''")>
+}
 
-//void  BytesLiteral() :
-//{}
-//{
-////    <BYTES_LITERAL>
-//}
+void  BytesLiteral() :
+{}
+{
+    <BYTES_LITERAL>
+}
 
 void  Digits() :
 {}
