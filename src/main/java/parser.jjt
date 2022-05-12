@@ -2,10 +2,12 @@ options
 {
   LOOKAHEAD=3;
   DEBUG_PARSER = true;
+  JJTREE_OUTPUT_DIRECTORY = "parser";
 //  DEBUG_LOOKAHEAD = true;
 //  DEBUG_TOKEN_MANAGER = true;
 }
 PARSER_BEGIN(Parser)
+package parser;
 
 /**
  * Simple brace matcher.
@@ -45,12 +47,12 @@ TOKEN : {
        <DECIMAL_LITERAL> "i"
        | <REAL_LITERAL> "i">
 |<REAL_LITERAL :
-    ((<DECIMAL_LITERAL>)? "." (["0"-"9", "_"])+ (<EXPONENT_PART>)?)
-    | (<DECIMAL_LITERAL> (".")? <EXPONENT_PART>)
-    | ((<HEX_LITERAL> )? "." <HEX_LITERAL> (<PEXPONENT_PART>)?)
-    | ((<HEX_LITERAL> )? "." <HEX_LITERAL>  (<PEXPONENT_PART>)?)
-    |  (<HEX_LITERAL> (".")? <PEXPONENT_PART>)
-    |  (<HEX_LITERAL> (".")? <PEXPONENT_PART>)
+    ((<DECIMAL_LITERAL>)? <DOT> (["0"-"9", "_"])+ (<EXPONENT_PART>)?)
+    | (<DECIMAL_LITERAL> (<DOT>)? <EXPONENT_PART>)
+    | ((<HEX_LITERAL> )? <DOT> <HEX_LITERAL> (<PEXPONENT_PART>)?)
+    | ((<HEX_LITERAL> )? <DOT> <HEX_LITERAL>  (<PEXPONENT_PART>)?)
+    |  (<HEX_LITERAL> (<DOT>)? <PEXPONENT_PART>)
+    |  (<HEX_LITERAL> (<DOT>)? <PEXPONENT_PART>)
     >
 }
 TOKEN :
@@ -74,7 +76,7 @@ TOKEN :
 |
   < PEXPONENT_PART: ["p", "P"] ["+", "-"] <INTEGER_LITERAL> >
 |
-  <BOOL_LITERAL: (<TRUE> | <FALSE>) >
+  <BOOL_LITERAL: ("true" | "false") >
 }
 
 // OPERATORS
@@ -223,8 +225,8 @@ TOKEN :
 //| < THIS : "this" > // todo что то придумать с ним
 | < THROW : "throw" >
 | < THROWS: "throws" >
-| < TRUE : "true" >
-| < FALSE : "false" >
+//| < TRUE : "true" >
+//| < FALSE : "false" >
 | < TRY : "try" >
 | < TYPE : "type" >
 | < UNION : "union" >
@@ -449,8 +451,8 @@ void Exclude() :
 void ModuleOrEnumName() :
 {}
 {
-    LOOKAHEAD(3)RenameBase()
-    | LOOKAHEAD(3)<ID> "." ModuleOrEnumName()
+    LOOKAHEAD(3)(RenameBase())
+    |LOOKAHEAD(3)(<ID> <DOT> ModuleOrEnumName())
 }
 
 void RenameBase() :
@@ -476,20 +478,20 @@ void ImportExpr() :
 void ModuleOrSymbolBase() :
 {}
 {
-    <ID>[LOOKAHEAD(3)"." ModuleOrSymbolBase()]
+    <ID>[LOOKAHEAD(3)<DOT> ModuleOrSymbolBase()]
 }
 
 void ModuleOrSymbolRename() :
 {}
 {
     LOOKAHEAD(3)RenameBase()
-    | LOOKAHEAD(3)<ID> "." ModuleOrSymbolRename()
+    | LOOKAHEAD(3)<ID> <DOT> ModuleOrSymbolRename()
 }
 
 void UnqualifiedList() :
 {}
 {
-      "." "{" RenameBase() ("," RenameBase() )* "}"
+      <DOT> "{" RenameBase() ("," RenameBase() )* "}"
 }
 
 void DeferStatement() :
@@ -591,8 +593,8 @@ void MethodDeclarationStatement() :
 
 void TypeBinding() : {}
 {
-    <ID> "."
-    | "(" Expression() ")" "."
+    (<ID> <DOT>)
+    | ("(" Expression() ")" <DOT>)
 }
 
 void ThisIntent() :
@@ -1080,7 +1082,7 @@ void  CallExpression() :
 void  MemberAccessExpression() :
 {}
 {
-    [Expression() "."]
+    [Expression() <DOT>]
     (
     Expression() "(" (NamedExpression() ("," NamedExpression())*) ")" | Expression() "[" (NamedExpression() ("," NamedExpression())*) "]" | Identifier()
     |
@@ -1103,7 +1105,7 @@ ReceiverClause()
 void  ReceiverClause() :
 {}
 {
-    Expression() "."
+    Expression() <DOT>
 }
 
 void  FieldAccessExpression() :
@@ -1529,7 +1531,7 @@ void MbBinaryExpression() :
 void  TypeQueryExpression() :
 {}
 {
-    Expression()"." <TYPE>
+    Expression()<DOT> <TYPE>
 }
 
 void  MappedDomainExpression() :
@@ -1637,7 +1639,7 @@ void  AssociativeIndexType() :
 void  LocaleQueryExpression() :
 {}
 {
-    Expression()"." <LOCALE>
+    Expression()<DOT> <LOCALE>
 }
 
 void  TupleExpandExpression() :
@@ -1669,14 +1671,14 @@ void  TupleComponent() :
 void  ModuleAccessExpression() :
 {}
 {
-    ModuleIdentifierList() "." Identifier()
+    ModuleIdentifierList() <DOT> Identifier()
 }
 
 void  ModuleIdentifierList() :
 {}
 {
 LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)Identifier() "." ModuleIdentifierList()
+|LOOKAHEAD(3)Identifier() <DOT> ModuleIdentifierList()
 }
 
 void  ReduceExpression() :
@@ -1775,7 +1777,7 @@ void  IteratableCallExpression() :
 void  EnumConstantExpression() :
 {}
 {
-    Identifier() "." Identifier()
+    Identifier() <DOT> Identifier()
 }
 
 void  LiteralExpression() :
