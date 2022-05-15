@@ -23,7 +23,7 @@
 hs_err_pid*
 
 .idea/
-target/
+lib/javacc-javacc-7.0.11/target/
 .gradle/
 gradlew.bat
 gradlew

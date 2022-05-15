@@ -1,0 +1,1945 @@
+options
+{
+  LOOKAHEAD=3;
+  //DEBUG_PARSER = true;
+  JJTREE_OUTPUT_DIRECTORY = "parser";
+  TRACK_TOKENS = true;
+//  DEBUG_LOOKAHEAD = true;
+//  DEBUG_TOKEN_MANAGER = true;
+}
+PARSER_BEGIN(Parser)
+package parser;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+/**
+ * Simple brace matcher.
+ */
+public class Parser {
+
+  /** Main entry point. */
+  public static void main(String[] args) throws ParseException {
+    Parser parser = new Parser(System.in);
+    try {
+          SimpleNode n = parser.File();
+          n.dump("");
+          System.out.println("Thank you.");
+        } catch (Exception e) {
+          System.out.println("Oops.");
+          System.out.println(e.getMessage());
+          e.printStackTrace();
+        }
+  }
+
+  public static SimpleNode parse(String path) {
+        Parser parser;
+        if (path == null) {
+            parser = new Parser(System.in);
+        }
+        else {
+            try {
+                parser = new Parser(new FileInputStream(path));
+                return parser.File();
+            }
+            catch (Exception ignored) {
+                return null;
+            }
+        }
+            try {
+                return parser.File();
+            } catch (Exception e) {
+                return null;
+            }
+    }
+
+}
+
+PARSER_END(Parser)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")?>
+| <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
+}
+/* LITERALS */
+TOKEN : {
+<IMAGINARY_LITERAL :
+       <DECIMAL_LITERAL> "i"
+       | <REAL_LITERAL> "i">
+|<REAL_LITERAL :
+    ((<DECIMAL_LITERAL>)? <DOT> (["0"-"9", "_"])+ (<EXPONENT_PART>)?)
+    | (<DECIMAL_LITERAL> (<DOT>)? <EXPONENT_PART>)
+    | ((<HEX_LITERAL> )? <DOT> <HEX_LITERAL> (<PEXPONENT_PART>)?)
+    | ((<HEX_LITERAL> )? <DOT> <HEX_LITERAL>  (<PEXPONENT_PART>)?)
+    |  (<HEX_LITERAL> (<DOT>)? <PEXPONENT_PART>)
+    |  (<HEX_LITERAL> (<DOT>)? <PEXPONENT_PART>)
+    >
+}
+TOKEN :
+{
+  < INTEGER_LITERAL:
+        <DECIMAL_LITERAL>
+      | <HEX_LITERAL>
+      | <OCTAL_LITERAL>
+      | <BINARY_LITERAL>
+  >
+|
+  < DECIMAL_LITERAL: "0" | ["1"-"9"] (["0"-"9", "_"])* >
+|
+  < HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F", "_"])+ >
+|
+  < OCTAL_LITERAL: "0" ["O", "o"] (["0"-"7", "_"])+ >
+|
+  < BINARY_LITERAL : "0" ["B", "b"] ("0"| "1" |"_")+ >
+|
+  < EXPONENT_PART: ["e", "E"] ["+", "-"] <INTEGER_LITERAL> >
+|
+  < PEXPONENT_PART: ["p", "P"] ["+", "-"] <INTEGER_LITERAL> >
+|
+  <BOOL_LITERAL: ("true" | "false") >
+}
+
+// OPERATORS
+TOKEN :
+{
+  < LCURLYBRACE: "{" >
+| < RCURLYBRACE: "}" >
+| < LSQUAREBRACKET: "[" >
+| < RSQUAREBRACKET: "]" >
+| < LPARENTHESIS: "(" >
+| < RPARENTHESIS: ")" >
+| < COLON: ":" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < QUESTIONMARK: "?" >
+| < ASSIGNEQUAL: "=" >
+| < MULEQUAL: "*=" >
+| < DIVIDEEQUAL: "/=" >
+| < MODEQUAL: "%=" >
+| < PLUSEQUAL: "+=" >
+| < MINUSEQUAL: "-=" >
+| < SHIFTLEFTEQUAL: "<<=" >
+| < SHIFTRIGHTEQUAL: ">>=" >
+| < BITWISEANDEQUAL: "&=" >
+| < BITWISEOREQUAL: "|=" >
+| < BITWISEXOREQUAL: "^=" >
+| < POWEQUAL: "**=">
+| < REDUCEEQUAL : "reduce=" >
+| < RANGECOUNT : "#" >
+| < SWAP : "<=>">
+| < IO : "<~>">
+| < ARGS : "..." >
+| < RANGESPEC : ".." >
+| < OR: "||" >
+| < AND: "&&" >
+| < BITWISEOR: "|" >
+| < BITWISEXOR: "^" >
+| < BITWISEAND: "&" >
+| < EQUAL: "==" >
+| < NOTEQUAL: "!=" >
+| < LESSTHAN: "<" >
+| < GREATERTHAN: ">" >
+| < LESSTHANOREQUALTO: "<=" >
+| < GREATERTHANOREQUALTO: ">=" >
+| < SHIFTLEFT: "<<" >
+| < SHIFTRIGHT: ">>" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < MUL: "*" >
+| < DIVIDE: "/" >
+| < MOD: "%" >
+| < POW: "**">
+| < PLUSPLUS: "++" >
+| < MINUSMINUS: "--" >
+| < TILDE: "~" >
+| < NOT: "!" >
+| < DOT: ["."] >
+| < POINTERTO: "->" >
+| < DOTSTAR: ".*" >
+| < ARROWSTAR: "->*" >
+// KEYWORDS
+| < VOID: "void" >
+| < NOTHING: "nothing" >
+| < WILDCARD : "_" >
+| < UINT: "uint" >
+| < RANGE: "range" >
+| < ALIGN : "align" >
+| < AS : "as" >
+| < ATOMIC : "atomic" >
+| < BEGIN : "begin" >
+| < BOOL : "bool" >
+| < BORROWED : "borrowed" >
+| < BREAK : "break" >
+| < BY : "by" >
+| < BYTES: "bytes" >
+| < CATCH : "catch" >
+| < CLASS : "class" >
+| < COBEGIN : "cobegin" >
+| < COFORALL : "coforall" >
+| < COMPLEX : "complex" >
+| < CONFIG : "config" >
+| < CONST : "const" >
+| < CONTINUE : "continue" >
+| < DEFER: "defer" >
+| < DELETE : "delete" >
+| < DMAPPED : "dmapped" >
+| < DO : "do" >
+| < DOMAIN : "domain" >
+| < ELSE : "else" >
+| < ENUM : "enum" >
+| < EXCEPT : "except" >
+| < EXPORT : "export" >
+| < EXTERN : "extern" >
+| < FOR : "for" >
+| < FORALL : "forall" >
+| < FOREACH: "foreach" >
+| < FORWARDING : "forwarding" >
+| < IF : "if" >
+| < IMAG : "imag" >
+| < IMPLEMENTS : "implements" >
+| < IN : "in" >
+| < INDEX : "index" >
+| < INLINE : "inline" >
+| < INOUT : "inout" >
+| < INT : "int" >
+| < INTERFACE : "interface" >
+| < ITER : "iter" >
+| < LABEL : "label" >
+| < LET : "let" >
+| < LIFETIME : "lifetime" >
+| < LOCAL : "local" >
+| < LOCALE : "locale" >
+| < MANAGE : "manage" >
+| < MODULE : "module" >
+| < NEW : "new" >
+| < NIL : "nil" >
+| <NOINIT : "noinit" >
+| < ON : "on" >
+| < ONLY : "only" >
+| < OPERATOR : "operator" >
+| < OTHERWISE : "otherwise" >
+| < OUT : "out" >
+| < OVERRIDE : "override" >
+| < OWNED : "owned" >
+| < PARAM : "param" >
+| < PRIVATE : "private" >
+| < PROTOTYPE : "prototype" >
+| < PROC : "proc" >
+| < PUBLIC : "public" >
+| < REAL : "real" >
+| < RECORD : "record" >
+| < REDUCE : "reduce" >
+| < REF : "ref" >
+| < REQUIRE : "require" >
+| < RETURN : "return" >
+| < SCAN : "scan" >
+| < SELECT : "select" >
+| < SERIAL : "serial" >
+| < SHARED : "shared" >
+| < SINGLE : "single" >
+| < SPARSE : "sparse" >
+| < STRING : "string" >
+| < SUBDOMAIN : "subdomain" >
+| < SYNC : "sync" >
+| < THEN : "then" >
+//| < THIS : "this" > // todo что то придумать с ним
+| < THROW : "throw" >
+| < THROWS: "throws" >
+//| < TRUE : "true" >
+//| < FALSE : "false" >
+| < TRY : "try" >
+| < TYPE : "type" >
+| < UNION : "union" >
+| < UNMANAGED : "unmanaged" >
+| < USE : "use" >
+| < VAR : "var" >
+| < WHEN : "when" >
+| < WHERE : "where" >
+| < WHILE : "while" >
+| < WITH : "with" >
+| < YIELD : "yield" >
+| < ZIP : "zip" >
+| < MINMAX : "minmax">
+| < MINLOC : "minloc">
+| < MAXLOC : "maxloc">
+| < MIN : "min">
+| < MAX : "max">
+| < IMPORT : "import" >
+}
+/* IDENTIFIERS */
+TOKEN :
+{
+  < ID: <LETTER> (<LETTER>|<DIGIT>|"$")* >
+|
+  < #LETTER: ["_","a"-"z","A"-"Z"] >
+|
+  < #DIGIT: ["0"-"9"] >
+}
+
+/** Root production. */
+SimpleNode File() :
+{}
+{
+    Block()
+    {return jjtThis;}
+}
+
+void ArrayLiteral() :
+{}
+{
+    ("[" ExpressionList() "]" [Expression()])
+    |
+    LOOKAHEAD(3)("[" AssociativeExpr() ("," AssociativeExpr() )* "]")
+}
+
+void AssociativeExpr() :
+{}
+{
+    Expression() "=>" Expression()
+}
+
+void RangeLiteral() :
+{}
+{
+//    [Expression() ] <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
+    <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
+}
+
+void Block() :
+{}
+{
+    (Statement())* <EOF>
+}
+
+void  ExpressionStatement() :
+{}
+{
+    Expression() ";"
+}
+
+void Statement() :
+{}
+{
+    LOOKAHEAD(3)BlockStatement()
+    | LOOKAHEAD(3)IfStatement()
+//    | LOOKAHEAD(3)SwapStatement()
+    |  LOOKAHEAD(3)ForStatement()
+    |  LOOKAHEAD(3)SelectStatement()
+    |  LOOKAHEAD(3)WhileDoStatement()
+    |  LOOKAHEAD(3)DoWhileStatement()
+    |  LOOKAHEAD(3)LabelStatement()
+//    |  LOOKAHEAD(3)IoStatement()
+    |  LOOKAHEAD(3)BreakStatement()
+    |  LOOKAHEAD(3)ContinueStatement()
+    |  LOOKAHEAD(3)ParamForStatement()
+    |  LOOKAHEAD(3)UseStatement()
+    |  LOOKAHEAD(3)ImportStatement()
+    |  LOOKAHEAD(3)DeferStatement()
+    |  LOOKAHEAD(3)EmptyStatement()
+    |  LOOKAHEAD(3)ReturnStatement()
+    |  LOOKAHEAD(3)YieldStatement()
+    |  LOOKAHEAD(3)ModuleDeclarationStatement()
+    |  LOOKAHEAD(3)ProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)ExternalProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)ExportedProcedureDeclarationStatement()
+    |  LOOKAHEAD(3)IteratorDeclarationStatement()
+    |  LOOKAHEAD(3)MethodDeclarationStatement()
+    |  LOOKAHEAD(3)TypeDeclarationStatement()
+    |  LOOKAHEAD(3)VariableDeclarationStatement()
+    |  LOOKAHEAD(3)RemoteVariableDeclarationStatement()
+    |  LOOKAHEAD(3)OnStatement()
+    |  LOOKAHEAD(3)CobeginStatement()
+    |  LOOKAHEAD(3)CoforallStatement()
+    |  LOOKAHEAD(3)BeginStatement()
+    |  LOOKAHEAD(3)SyncStatement()
+    |  LOOKAHEAD(3)SerialStatement()
+    |  LOOKAHEAD(3)ForallStatement()
+    |  LOOKAHEAD(3)DeleteStatement()
+    |  LOOKAHEAD(3)ManageStatement()
+    | LOOKAHEAD(3)ExpressionStatement()
+}
+
+void SwapStatement() :
+{}
+{
+    LvalueExpression() <SWAP> LvalueExpression()
+}
+
+void IoStatement() :
+{}
+{
+    IOExpr() ";"
+}
+
+void IOExpr() :
+{}
+{
+    Expression() (<IO> Expression())+
+}
+
+void IOExprRR() :
+{}
+{
+    Expression() [<IO> IOExprRR()]
+}
+
+void SelectStatement() :
+{}
+{
+    <SELECT> Expression() "{"
+    (
+    (<WHEN> Expression() ("," Expression())* ((<DO> Statement()) | BlockStatement()))
+    | (<OTHERWISE> (Statement() | (<DO> Statement() )))
+    )*
+    "}"
+}
+void CTRLDecl() :
+{}
+{
+     (<VAR> | <CONST>) <ID> <EQUAL> Expression()
+
+}
+void WhileDoStatement() :
+{}
+{
+    <WHILE>
+    (Expression() | CTRLDecl())  (<DO> Statement() | BlockStatement())
+}
+
+void DoWhileStatement() :
+{}
+{
+    <DO> Statement() <WHILE> Expression() ";"
+}
+
+void ForStatement() :
+{}
+{
+    <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr()
+    (
+    (<DO> Statement())
+    | BlockStatement()
+    )
+}
+
+void IterableExpr() :
+{}
+{
+    Expression() | (<ZIP> "(" ExpressionList() ")")
+}
+
+void LabelStatement() :
+{}
+{
+    <LABEL> <ID> Statement()
+}
+void BreakStatement() :
+{}
+{
+    <BREAK> [LOOKAHEAD(2)<ID>]
+}
+void ContinueStatement() :
+{}
+{
+    <CONTINUE> [LOOKAHEAD(2)<ID>]
+}
+void ParamForStatement() :
+{}
+{
+    <FOR> <PARAM> <ID> <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] (<DO> Statement() | BlockStatement() )
+}
+void UseStatement() :
+{}
+{
+    [PrivacySpecifier()] <USE> ModuleOrEnumName() ("," ModuleOrEnumName() )* [LimitationClause()]
+}
+
+void LimitationClause() :
+{}
+{
+    (<EXCEPT> Exclude() ("," Exclude())* )
+    | (<ONLY> [LOOKAHEAD(3)RenameBase() ("," RenameBase())* ])
+}
+
+void Exclude() :
+{}
+{
+    Operator()
+    | <ID>
+}
+
+void ModuleOrEnumName() :
+{}
+{
+    LOOKAHEAD(3)(RenameBase())
+    |LOOKAHEAD(3)(<ID> <DOT> ModuleOrEnumName())
+}
+
+void RenameBase() :
+{}
+{
+    (<ID> [<AS> (<ID> | <WILDCARD> ) ])
+    | Operator()
+}
+
+void ImportStatement() :
+{}
+{
+    [PrivacySpecifier()] <IMPORT> ImportExpr() ("," ImportExpr() )*
+}
+
+void ImportExpr() :
+{}
+{
+    LOOKAHEAD(3)ModuleOrSymbolRename()
+    | LOOKAHEAD(3)ModuleOrSymbolBase() UnqualifiedList()
+}
+
+void ModuleOrSymbolBase() :
+{}
+{
+    <ID>[LOOKAHEAD(3)<DOT> ModuleOrSymbolBase()]
+}
+
+void ModuleOrSymbolRename() :
+{}
+{
+    LOOKAHEAD(3)RenameBase()
+    | LOOKAHEAD(3)<ID> <DOT> ModuleOrSymbolRename()
+}
+
+void UnqualifiedList() :
+{}
+{
+      <DOT> "{" RenameBase() ("," RenameBase() )* "}"
+}
+
+void DeferStatement() :
+{}
+{
+    <DEFER> Statement()
+}
+void EmptyStatement() :
+{}
+{
+    <SEMICOLON>
+}
+
+void ReturnStatement() :
+{}
+{
+    <RETURN> [Expression()] ";"
+}
+
+void YieldStatement() :
+{}
+{
+    <YIELD> Expression() ";"
+}
+
+void ModuleDeclarationStatement() :
+{}
+{
+    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> BlockStatement()
+}
+
+void ProcedureDeclarationStatement() :
+{}
+{
+    [PrivacySpecifier()]
+    [ProcKind()]
+    (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
+    [LOOKAHEAD(3)ReturnIntent()]
+    [ReturnType() ]
+    [WhereClause() ] FunctionBody()
+
+}
+
+void FunctionBody():
+{}
+{
+    BlockStatement() | ReturnStatement()
+}
+
+void WhereClause() : {}
+{
+    <WHERE> Expression()
+}
+void ReturnType() :
+{}
+{
+    ":" Expression()
+}
+
+void ExternalProcedureDeclarationStatement() :
+{}
+{
+    <EXTERN> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType()]
+}
+
+void ExportedProcedureDeclarationStatement() :
+{}
+{
+    <EXPORT> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType() ]
+}
+
+void IteratorDeclarationStatement() :
+{}
+{
+    [PrivacySpecifier() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
+    (YieldStatement() | BlockStatement())
+}
+
+void YieldType() :
+{}
+{
+    ":" Expression()
+}
+
+void YieldIntent() :
+{}
+{
+    <CONST> (<REF>)?
+    | <REF>
+    | <PARAM>
+    | <TYPE>
+}
+void MethodDeclarationStatement() :
+{}
+{
+    [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [LOOKAHEAD(3)TypeBinding()]
+        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  FunctionBody()
+}
+
+void TypeBinding() : {}
+{
+    (<ID> <DOT>)
+    | ("(" Expression() ")" <DOT>)
+}
+
+void ThisIntent() :
+{}
+{
+    <PARAM>
+    |<TYPE>
+    |<REF>
+    |<CONST> (<REF>)?
+}
+
+void TypeDeclarationStatement() :
+{}
+{
+    EnumDeclarationStatement()
+    |  ClassDeclarationStatement()
+    |  LOOKAHEAD(3)TypeAliasDeclarationStatement()
+    |  LOOKAHEAD(3)RecordDeclarationStatement()
+    |  LOOKAHEAD(3)UnionDeclarationStatement()
+}
+
+void EnumDeclarationStatement() :
+{}
+{
+  <ENUM> <ID> "{" EnumConstantList() "}"
+}
+
+void EnumConstantList() :
+{}
+{
+  LOOKAHEAD(3)EnumConstant()
+|  LOOKAHEAD(3)EnumConstant() "," [EnumConstantList()]
+}
+
+void EnumConstant():
+{}
+{
+    <ID> [InitPart()]
+}
+
+void InitPart(): {}
+{
+    "=" Expression()
+}
+
+void ClassDeclarationStatement(): {}
+{
+    <CLASS> <ID> [ClassInherit()] "{"[ ClassStatementList()]"}"
+}
+
+void ClassInherit() :
+{}
+{
+    ":" BasicClassType()
+}
+
+void BasicClassType() :
+{}
+{
+    LOOKAHEAD(3)<ID> "(" (NamedExpression() ("," NamedExpression())*) ")"
+    |LOOKAHEAD(3)<ID>
+}
+
+void  NamedExpressionList() :
+{}
+{
+
+    LOOKAHEAD(3)NamedExpression() "," NamedExpressionList()
+    |LOOKAHEAD(3)NamedExpression()
+}
+
+void  NamedExpression() :
+{}
+{
+    LOOKAHEAD(3)Expression()
+    |LOOKAHEAD(3)<ID> "=" Expression()
+}
+
+void ClassStatementList() :
+{}
+{
+    ClassStatement() (ClassStatement())*
+}
+
+void ClassStatement() :
+{}
+{
+    LOOKAHEAD(3)VariableDeclarationStatement()
+    |LOOKAHEAD(3)MethodDeclarationStatement()
+    |TypeDeclarationStatement()
+    |EmptyStatement()
+}
+
+void RecordDeclarationStatement() :
+{}
+{
+    SimpleRecordDeclarationStatement()
+    | ExternalRecordDeclarationStatement()
+}
+
+void ExternalRecordDeclarationStatement() :
+{}
+{
+    <EXTERN> [Expression()] SimpleRecordDeclarationStatement()
+}
+
+void Identifier() :{} {<ID>}
+
+void SimpleRecordDeclarationStatement() :
+{}
+{
+    <RECORD> Identifier() "{" RecordStatementList() "}"
+}
+
+void RecordStatementList() :
+{}
+{
+    LOOKAHEAD(3)RecordStatement()
+    |LOOKAHEAD(3)RecordStatement() RecordStatementList()
+}
+
+void RecordStatement() :
+{}
+{
+    LOOKAHEAD(3)VariableDeclarationStatement()
+    |LOOKAHEAD(3)MethodDeclarationStatement()
+    |TypeDeclarationStatement()
+    |EmptyStatement()
+}
+
+void UnionDeclarationStatement() :
+{}
+{
+    [<EXTERN> ] <UNION> Identifier() "{" UnionStatementList()"}"
+}
+
+void UnionStatementList() :
+{}
+{
+    LOOKAHEAD(3)UnionStatement() UnionStatementList()
+    |LOOKAHEAD(3)UnionStatement()
+}
+
+void UnionStatement() :
+{}
+{
+    LOOKAHEAD(3)TypeDeclarationStatement()
+    |LOOKAHEAD(3)ProcedureDeclarationStatement()
+    |LOOKAHEAD(3)IteratorDeclarationStatement()
+    |VariableDeclarationStatement()
+    |EmptyStatement()
+}
+
+void TypeAliasDeclarationStatement() :
+{}
+{
+    [PrivacySpecifier()] [<CONFIG>] <TYPE> TypeAliasDeclaration() ("," TypeAliasDeclaration())* ";"
+    | ExternalTypeAliasDeclarationStatement()
+}
+
+void  ExternalTypeAliasDeclarationStatement() :
+{}
+{
+    <EXTERN> [Expression()] <TYPE> TypeAliasDeclaration() ("," TypeAliasDeclaration())*
+}
+
+void TypeAliasDeclarationList() :
+{}
+{
+    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
+    |LOOKAHEAD(3)TypeAliasDeclaration()
+}
+
+void TypeAliasDeclaration() :
+{}
+{
+    LOOKAHEAD(3)Identifier() "=" Expression()
+    |Identifier()
+}
+
+void VariableDeclarationStatement() :
+{}
+{
+    [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind()
+    VariableDeclaration() ("," VariableDeclaration())* ";"
+}
+
+void ConfigExternOrExport():
+{}
+{
+    <CONFIG>
+    |<EXTERN>
+    |<EXPORT>
+}
+
+void VariableKind() :
+{}
+{
+<PARAM>
+|<CONST> [<REF>]
+|<VAR>
+|<REF>
+}
+
+void VariableDeclarationList() :
+{}
+{
+    LOOKAHEAD(3)VariableDeclaration() "," VariableDeclarationList()
+    |LOOKAHEAD(3)VariableDeclaration()
+}
+
+
+
+void VariableDeclaration() :
+{}
+{
+    IdentifierList()
+    [TypePart()] [InitializationPart()]
+}
+
+void TypePart() :
+{}
+{
+ ":" Expression()
+}
+
+void InitializationPart() :
+{}
+{
+ "=" Expression()
+}
+
+void IdentifierList() :
+{}
+{
+    (Identifier() ("," Identifier())*)
+    | "(" IdentifierList() ")"
+}
+
+void TupleGroupedIdentifierList() :
+{}
+{
+    "(" (Identifier() ("," Identifier())* ) ")"
+}
+
+void RemoteVariableDeclarationStatement() :
+{}
+{
+    <ON> Expression() VariableDeclarationStatement()
+}
+
+void OnStatement() :
+{}
+{
+    LOOKAHEAD(3)<ON> Expression() <DO> Statement()
+    |LOOKAHEAD(3)<ON> Expression() BlockStatement()
+}
+
+void CobeginStatement() :
+{}
+{
+    <COBEGIN> [TaskIntentClause()] BlockStatement()
+}
+
+
+void  TaskIntentClause() :
+{}
+{
+    <WITH> "(" TaskIntentList() ")"
+}
+
+void  TaskIntentItem() :
+{}
+{
+LOOKAHEAD(3)FormalIntent() Identifier()
+|ReduceScanOperator() <REDUCE> Identifier()
+|ClassType() <REDUCE> Identifier()
+|LOOKAHEAD(3)TaskPrivateVarDecl()
+}
+
+void ClassType() :
+{}
+{
+    BasicClassType()
+    |<OWNED> BasicClassType()
+    |<SHARED> BasicClassType()
+    |<BORROWED> BasicClassType()
+    |<UNMANAGED> BasicClassType()
+}
+
+void  ReduceScanOperator() :
+{}
+{
+"+"
+|"*"
+|"&&"
+|"||"
+|"&"
+|"|"
+|"^"
+|<MINMAX>
+|<MINLOC>
+|<MAXLOC>
+|<MIN>
+|<MAX>
+}
+
+void  TaskIntentList() :
+{}
+{
+    LOOKAHEAD(3)TaskIntentItem() "," TaskIntentList()
+    |LOOKAHEAD(3)TaskIntentItem()
+}
+
+void  TaskPrivateVarDecl() :
+{}
+{
+    TaskPrivateVarKind() Identifier() [TypePart()] [InitializationPart()]
+}
+
+void  TaskPrivateVarKind() :
+{}
+{
+<CONST>
+|<VAR>
+|<REF>
+}
+
+void CoforallStatement() :
+{}
+{
+    <COFORALL> (IndexVarDeclaration() | IteratableExpression() )
+    [<IN> IteratableExpression()] [TaskIntentClause()] ((<DO> Statement()) | BlockStatement())
+}
+
+void  IteratableExpression() :
+{}
+{
+    Expression()
+    |<ZIP> "(" ExpressionList() ")"
+}
+
+void ExpressionList() #void:
+{}
+{
+    Expression() ("," Expression())*
+//    LOOKAHEAD(3)Expression() "," ExpressionList()
+//    |LOOKAHEAD(3)Expression()
+}
+
+void  IndexVarDeclaration() :
+{}
+{
+Identifier()
+|TupleGroupedIdentifierList()
+}
+
+void  BeginStatement() :
+{}
+{
+    <BEGIN> [TaskIntentClause()] Statement()
+}
+
+void  SyncStatement() :
+{}
+{
+ LOOKAHEAD(3)<SYNC> Statement()
+|LOOKAHEAD(3)<SYNC> BlockStatement()
+}
+
+void  SyncType() :
+{}
+{
+ <SYNC> Expression()
+}
+
+void  SerialStatement() :
+{}
+{
+ LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] <DO> Statement()
+|LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] BlockStatement()
+}
+
+void  AtomicType() :
+{}
+{
+    <ATOMIC> Expression()
+}
+
+void  SingleType() :
+{}
+{
+    <SINGLE> Expression()
+}
+
+void  ForallStatement() :
+{}
+{
+    (<FORALL> (IndexVarDeclaration() | IteratableExpression()) [<IN> IteratableExpression()] [TaskIntentClause()]
+     ((<DO> Statement()) | BlockStatement()) )
+    | ("[" (IndexVarDeclaration() | IteratableExpression())
+        [<IN> IteratableExpression()] [TaskIntentClause()] "]" Statement()
+        )
+
+//  LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+//| LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
+//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
+//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
+//| LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
+//| LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Statement()
+}
+
+void  DeleteStatement() :
+{}
+{
+ <DELETE> ExpressionList() ";"
+}
+
+void ManageStatement() :
+{}
+{
+    LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* <DO> Statement()
+    |LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* BlockStatement()
+}
+
+void ManagerExpression() :
+{}
+{
+LOOKAHEAD(3)Expression() <AS> VariableKind() Identifier()
+|LOOKAHEAD(3)Expression() <AS> Identifier()
+|LOOKAHEAD(3)Expression()
+}
+
+void ManagerExpressionList() :
+{}
+{
+    ManagerExpression()
+//    | ManagerExpressionList() ","  ManagerExpression()
+}
+
+void AssignStatement() :
+{}
+{
+    LvalueExpression() AssignOperators() Expression() ";"
+}
+
+void LvalueExpression() :
+{}
+{
+(LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)MemberAccessExpression()
+//|LOOKAHEAD(3)CallExpression()
+|LOOKAHEAD(3)ParenthesizedExpression())
+( ("[" (NamedExpression() ("," NamedExpression())*) "]") | ("(" (NamedExpression() ("," NamedExpression())*) ")") )*
+}
+//void  LvalueExpression() :
+//{}
+//{
+//    (CallExpressionRightRecursion())*
+//    (LOOKAHEAD(3)Identifier()
+//    |LOOKAHEAD(3)ParenthesizedExpression()
+//    |LOOKAHEAD(3)MemberAccessExpression()
+//    )
+//
+//}
+
+void CallExpressionRightRecursion() :
+{}
+{
+    "[" (NamedExpression() ("," NamedExpression())*)"]"| "(" (NamedExpression() ("," NamedExpression())*)")"
+}
+
+void  ParenthesizedExpression() :
+{}
+{
+    "(" Expression() ")"
+}
+
+void  CallExpression() :
+{}
+{
+ LvalueExpression() (("[" (NamedExpression() ("," NamedExpression())*)"]") | ("(" (NamedExpression() ("," NamedExpression())*)")"))
+}
+
+void  MemberAccessExpression() :
+{}
+{
+    [Expression() <DOT>]
+    (
+    Expression() "(" (NamedExpression() ("," NamedExpression())*) ")" | Expression() "[" (NamedExpression() ("," NamedExpression())*) "]" | Identifier()
+    |
+    Identifier()
+    )
+}
+
+void  MethodCallExpression() :
+{}
+{
+ReceiverClause()
+(
+  (Expression()"(" (NamedExpression() ("," NamedExpression())*) ")")
+| (Expression()"[" (NamedExpression() ("," NamedExpression())*) "]")
+| Identifier()
+)
+
+}
+
+void  ReceiverClause() :
+{}
+{
+    Expression() <DOT>
+}
+
+void  FieldAccessExpression() :
+{}
+{
+    ReceiverClause() Identifier()
+}
+
+
+void AssignOperators() :
+{}
+{
+    "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "%="
+    | "**="
+    | "&="
+    | "|="
+    | "^="
+    | "&&="
+    | "||="
+    | "<<="
+    | ">>="
+}
+
+void BlockStatement() :
+{}
+{
+    "{" (Statement())* "}"
+}
+
+void IfStatement() :
+{}
+{
+    <IF> (Expression() | CTRLDecl() )
+    (<THEN> Statement() | BlockStatement())
+    [LOOKAHEAD(3)<ELSE> Statement()]
+}
+
+//void Declaration() :
+//{}
+//{
+//    ModuleDeclaration()
+//    | ProcDeclaration()
+//    | ClassDeclaration()
+//}
+
+void PrivacySpecifier() : {}
+{
+    <PRIVATE> | <PUBLIC>
+}
+
+void ReturnIntent() :
+{}
+{
+    LOOKAHEAD(3)<CONST> <REF>
+    | LOOKAHEAD(3)<CONST>
+    | <REF>
+    | <PARAM>
+    | <TYPE>
+}
+
+//void  TypeExpression() :
+//{}
+//{
+//LOOKAHEAD(3)StructuredType()
+//|LOOKAHEAD(3)DataparallelType()
+//|LOOKAHEAD(3)PrimitiveType()
+////| LOOKAHEAD(3)BinaryExpression()
+//| Expression()
+//|LOOKAHEAD(3)Identifier()
+//|SynchronizationType()
+//|LOOKAHEAD(3)LvalueExpression()
+//|LOOKAHEAD(3)IfExpression()
+//|LOOKAHEAD(3)UnaryExpression()
+//}
+
+void  SynchronizationType() :
+{}
+{
+ SyncType()
+|SingleType()
+|AtomicType()
+}
+
+void  DataparallelType() :
+{}
+{
+ RangeType()
+|LOOKAHEAD(3)DomainType()
+|LOOKAHEAD(3)MappedDomainType()
+//|LOOKAHEAD(3)ArrayType()
+|LOOKAHEAD(3)IndexType()
+}
+
+void  MappedDomainType() :
+{}
+{
+ DomainType() <DMAPPED> DmapValue()
+}
+
+void  ArrayType() :
+{}
+{
+// "[" DomainExpression() "]" Expression()
+    "[" (ExpressionList() | DomainExpression() )  "]" [Expression()]
+}
+
+void  IndexType() :
+{}
+{
+ <INDEX> "(" DomainExpression() ")"
+}
+
+void  RangeType() :
+{}
+{
+ <RANGE> ("(" (NamedExpression() ("," NamedExpression())*) ")")?
+}
+
+void  StructuredType() :
+{}
+{
+ LOOKAHEAD(3)ClassType()
+| LOOKAHEAD(3)RecordType()
+| LOOKAHEAD(3)Identifier()
+| TupleType()
+}
+
+void  RecordType() :
+{}
+{
+ LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)Identifier()"(" (NamedExpression() ("," NamedExpression())*) ")"
+}
+
+void  TupleType() :
+{}
+{
+"(" Expression() ("," Expression())* [","] ")"
+}
+
+void  TypeList() :
+{}
+{
+ LOOKAHEAD(3)Expression()
+|LOOKAHEAD(3)Expression()"," TypeList()
+}
+
+void  PrimitiveTypeParameterPart() :
+{}
+{
+ "(" IntegerParameterExpression() ")"
+}
+
+void  IntegerParameterExpression() :
+{}
+{
+ Expression()
+}
+
+void  PrimitiveType() :
+{}
+{
+ <VOID>
+|<NOTHING>
+|(<INT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<BOOL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<UINT>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<REAL>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<IMAG>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|(<COMPLEX>[LOOKAHEAD(3)PrimitiveTypeParameterPart()])
+|<STRING>
+|<BYTES>
+|<ENUM>
+|<RECORD>
+|<CLASS>
+|<OWNED>
+|<SHARED>
+|<UNMANAGED>
+|<BORROWED>
+}
+
+void Operator() :
+{}
+{
+//'align' 'by'
+//  + - * / % ** : ! == != <= >= < > << >> & | ^ ~
+    <ALIGN>
+    | <BY>
+    |<PLUS>
+    | <MINUS>
+    | <MUL>
+    | <DIVIDE>
+    | <MOD>
+    | <POW>
+    | <COLON>
+    | <NOT>
+    | <EQUAL>
+    | <NOTEQUAL>
+    | <LESSTHANOREQUALTO>
+    | <GREATERTHANOREQUALTO>
+    | <LESSTHAN>
+    | <GREATERTHAN>
+    | <SHIFTLEFT>
+    | <SHIFTRIGHT>
+    | <BITWISEAND>
+    | <BITWISEOR>
+    | <BITWISEXOR>
+    | <TILDE>
+//  = += -= *= /= %= **= &= |= ^= <<= >>= <=> <~> #
+    | <ASSIGNEQUAL>
+    | <PLUSEQUAL>
+    | <MINUSEQUAL>
+    | <MULEQUAL>
+    | <DIVIDEEQUAL>
+    | <MODEQUAL>
+    | <POWEQUAL>
+    | <BITWISEANDEQUAL>
+    | <BITWISEOREQUAL>
+    | <BITWISEXOREQUAL>
+    | <SHIFTLEFTEQUAL>
+    | <SHIFTRIGHTEQUAL>
+    | <SWAP>
+    | <IO>
+    | <AND>
+    | <RANGECOUNT>
+    | <MINUSMINUS>
+    | <PLUSPLUS>
+}
+
+void ArgumentList() :
+{}
+{
+    "(" [Formal() ("," Formal())*] ")"
+}
+
+void FormalType() :
+{}
+{
+    ":" (Expression() | LOOKAHEAD(3)"?" [LOOKAHEAD(3)Expression()])
+}
+
+void VariableArgumentExpr() :
+{}
+{
+    <ARGS> (Expression()  | LOOKAHEAD(3)"?" <ID>)?
+}
+
+void Formal() :
+{}
+{
+     [ FormalIntent()]
+      (<ID> | TupleGroupedIdentifierList())
+      [FormalType()]
+      ("=" Expression()  | VariableArgumentExpr() )?
+}
+
+void FormalIntent() :
+{}
+{
+    <CONST> (<IN> | <REF>)?
+    | <IN>
+    | <OUT>
+    | <INOUT>
+    | <REF>
+    | <PARAM>
+    | <TYPE>
+}
+
+void ProcKind() :
+{}
+{
+    <INLINE> | <EXPORT> | <EXTERN> | <OVERRIDE>
+}
+
+void Expression() :
+{}
+{
+   MbTypeExpression()
+}
+//Нужно разбирать по контексту эррэй литерал, так как он в типах и выражениях немного разный
+void MbTypeExpression() :
+{}
+{
+     (LOOKAHEAD(3)TupleType()
+    | LOOKAHEAD(3)DataparallelType()
+    | LOOKAHEAD(3)LiteralExpression()
+    | PrimitiveType()
+    | SynchronizationType()
+    | ParenthesizedExpression()
+    |LOOKAHEAD(3)TupleExpression()
+    |LetExpression()
+    |IfExpression()
+    |ForExpression()
+    |ForallExpression()
+    |Identifier()
+    |LOOKAHEAD(3)EnumConstantExpression()
+    |LOOKAHEAD(3)NewExpression()
+    |LOOKAHEAD(3)QueryExpression()
+    |LOOKAHEAD(3)UnaryExpression()
+    |LOOKAHEAD(3)ReduceExpression()
+    |LOOKAHEAD(3)ScanExpression()
+    |LOOKAHEAD(3)ModuleAccessExpression()
+    |LOOKAHEAD(3)TupleExpandExpression()
+    | DomainExpression()
+    |LOOKAHEAD(3)MappedDomainExpression())
+    (
+     (<COLON> Expression())
+    | ("[" (NamedExpression() ("," NamedExpression())*)? "]")
+    | (BinaryOperator() Expression())
+    | ("(" (NamedExpression() ("," NamedExpression())*)? ")")
+    | (
+        <DOT>
+        (
+         Identifier()
+         | <LOCALE>
+         | <TYPE>
+         | LOOKAHEAD(3)<DOMAIN>
+         | LOOKAHEAD(3)(Expression() "(" (NamedExpression() ("," NamedExpression())*)? ")")
+         | LOOKAHEAD(3)(Expression() "[" (NamedExpression() ("," NamedExpression())*)? "]")
+         )
+      )
+    | (<RANGESPEC> ("<")? [LOOKAHEAD(2)Expression()])
+    | ( AssignOperators() Expression() )
+    | (<SWAP> Expression() )
+    | (<IO> Expression() )
+    )*
+}
+
+//void TypeExpression() : {}
+//{
+//
+//}
+
+void MbTypeQueryExpression() :
+{}
+{
+TypeQueryExpression()
+|LOOKAHEAD(3)TupleExpression()
+|LetExpression()
+|IfExpression()
+|ForExpression()
+|ForallExpression()
+|LOOKAHEAD(3)EnumConstantExpression()
+|LiteralExpression()
+|LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)NewExpression()
+|LOOKAHEAD(3)QueryExpression()
+|LOOKAHEAD(3)UnaryExpression()
+|LOOKAHEAD(3)ReduceExpression()
+|LOOKAHEAD(3)ScanExpression()
+|LOOKAHEAD(3)ModuleAccessExpression()
+|LOOKAHEAD(3)TupleExpandExpression()
+|LOOKAHEAD(3)MappedDomainExpression()
+}
+
+void MbLocaleQueryExpression() :
+{}
+{
+    LocaleQueryExpression()
+    | MbTypeQueryExpression()
+}
+
+void MbMemberAccessExpression() :
+{}
+{
+    MemberAccessExpression()
+    |MbParenthesizedExpression()
+}
+
+void MbParenthesizedExpression() :
+{}
+{
+    ParenthesizedExpression()
+    |MbLocaleQueryExpression()
+}
+
+
+
+
+
+void MbIteratableCallExpression() :
+{}
+{
+    IteratableCallExpression()
+    |MbMemberAccessExpression()
+}
+
+void MbCallExpression() :
+{}
+{
+    CallExpression()
+    |MbIteratableCallExpression()
+}
+
+void MbLvalueExpression() :
+{}
+{
+    LvalueExpression()
+    |MbCallExpression()
+}
+
+void MbCastExpression() :
+{}
+{
+    (Expression() ":" Expression())*
+    | MbBinaryExpression()
+}
+
+void MbBinaryExpression() :
+{}
+{
+    BinaryExpression()
+    |MbLvalueExpression()
+}
+
+
+
+void  TypeQueryExpression() :
+{}
+{
+    Expression()<DOT> <TYPE>
+}
+
+void  MappedDomainExpression() :
+{}
+{
+    DomainExpression() <DMAPPED> DmapValue()
+}
+
+void  DmapValue() :
+{}
+{
+ Expression()
+}
+
+void  DomainExpression() :
+{}
+{
+ (DomainLiteral()
+|LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)DomainAssignmentExpression())
+(
+  (<ALIGN> Expression())
+| (<BY> Expression())
+| ("[" SlicingIndexSet() "]")
+| ("(" SlicingIndexSet() ")")
+)*
+}
+
+void  DomainAlignmentExpression() :
+{}
+{
+ <ALIGN> Expression() DomainAlignmentExpression()
+}
+
+void  DomainAssignmentExpression() :
+{}
+{
+ Identifier() "=" DomainExpression()
+}
+
+void  DomainSliceExpression() :
+{}
+{
+ ("[" SlicingIndexSet() "]" | "(" SlicingIndexSet() ")") DomainSliceExpression()
+}
+
+void  SlicingIndexSet() :
+{}
+{
+ LOOKAHEAD(3)DomainExpression()
+|LOOKAHEAD(3)RangeExpressionList()
+}
+
+void  DomainStridingExpression() :
+{}
+{
+ <BY> Expression() DomainStridingExpression()
+}
+
+void  DomainType() :
+{}
+{
+ BaseDomainType()
+|SimpleSubdomainType()
+|SparseSubdomainType()
+}
+
+void  SimpleSubdomainType() :
+{}
+{
+ <SUBDOMAIN> "(" DomainExpression() ")"
+}
+
+void  SparseSubdomainType() :
+{}
+{
+ <SPARSE>[<SUBDOMAIN>]"(" DomainExpression() ")"
+}
+
+void  BaseDomainType() :
+{}
+{
+ LOOKAHEAD(3)RectangularDomainType()
+|LOOKAHEAD(3)AssociativeDomainType()
+}
+
+void  RectangularDomainType() :
+{}
+{
+ <DOMAIN>"(" (NamedExpression() ("," NamedExpression())*) ")"
+}
+
+void  AssociativeDomainType() :
+{}
+{
+ <DOMAIN> "(" AssociativeIndexType() ")"
+}
+
+void  AssociativeIndexType() :
+{}
+{
+ Expression()
+}
+
+void  LocaleQueryExpression() :
+{}
+{
+    Expression()<DOT> <LOCALE>
+}
+
+void  TupleExpandExpression() :
+{}
+{
+    "(" <ARGS> Expression() ")"
+}
+
+void  TupleExpression() :
+{}
+{
+ "(" TupleComponent() ("," TupleComponent())* [","] ")"
+}
+
+void  TupleComponentList() :
+{}
+{
+ LOOKAHEAD(3)TupleComponent()
+|LOOKAHEAD(3)TupleComponent() "," TupleComponentList()
+}
+
+void  TupleComponent() :
+{}
+{
+ Expression()
+| "_"
+}
+
+void  ModuleAccessExpression() :
+{}
+{
+    ModuleIdentifierList() <DOT> Identifier()
+}
+
+void  ModuleIdentifierList() :
+{}
+{
+LOOKAHEAD(3)Identifier()
+|LOOKAHEAD(3)Identifier() <DOT> ModuleIdentifierList()
+}
+
+void  ReduceExpression() :
+{}
+{
+    ReduceScanOperator()<REDUCE> IteratableExpression()
+    |ClassType()<REDUCE> IteratableExpression()
+}
+
+void  ScanExpression() :
+{}
+{
+    ReduceScanOperator() <SCAN> IteratableExpression()
+    |ClassType() <SCAN> IteratableExpression()
+}
+
+void  IfExpression() :
+{}
+{
+<IF> Expression() <THEN> Expression() [<ELSE> Expression()]
+}
+
+void  ForExpression() :
+{}
+{
+LOOKAHEAD(3)(<FOR> IndexVarDeclaration() <IN> IteratableExpression() <DO> Expression())
+|LOOKAHEAD(3)(<FOR> IteratableExpression() <DO> Expression())
+}
+
+void  ForallExpression() :
+{}
+{
+ LOOKAHEAD(3)(<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Expression())
+|LOOKAHEAD(3)(<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Expression())
+|LOOKAHEAD(3)("[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Expression())
+|LOOKAHEAD(3)("[" IteratableExpression() [TaskIntentClause()] "]" Expression())
+}
+
+void  LetExpression() :
+{}
+{
+    <LET> VariableDeclarationList() <IN> Expression()
+}
+
+void  BinaryExpression() :
+{}
+{
+    Expression() BinaryOperator() Expression()
+}
+
+void  BinaryOperator() :
+{}
+{
+ "+" | "-" | "*" | "/" | "%" | <POW> | "&" | "|" | "^"
+ | <SHIFTLEFT> | <SHIFTRIGHT> | <AND> | <OR> | <EQUAL>
+ | <NOTEQUAL> | <LESSTHANOREQUALTO> | <GREATERTHANOREQUALTO>
+ | <LESSTHAN> | <GREATERTHAN> | <BY> | <RANGECOUNT>
+}
+
+void  UnaryExpression() :
+{}
+{
+    UnaryOperator() Expression()
+}
+
+void  UnaryOperator() :
+{}
+{
+ "+" | "-" | "~" | "!"
+}
+
+void  CastExpression() :
+{}
+{
+   Expression() ":" Expression()
+}
+
+void QueryExpression() :
+{}
+{
+    "?" [Identifier()]
+}
+
+void  NewExpression() :
+{}
+{
+  <NEW> Expression()["(" ArgumentList() ")"]
+}
+
+void  IteratableCallExpression() :
+{}
+{
+    CallExpression()
+}
+
+void  EnumConstantExpression() :
+{}
+{
+    Identifier() <DOT> Identifier()
+}
+
+void  LiteralExpression() :
+{}
+{
+ BoolLiteral()
+|LOOKAHEAD(3)RealLiteral()
+|LOOKAHEAD(3)ImaginaryLiteral()
+|LOOKAHEAD(3)IntegerLiteral()
+|LOOKAHEAD(3)RangeLiteral()
+|LOOKAHEAD(3)DomainLiteral()
+|ArrayLiteral()
+|StringLiteral()
+|BytesLiteral()
+}
+void RealLiteral() : {} {<REAL_LITERAL> }
+void ImaginaryLiteral() : {} {<IMAGINARY_LITERAL> }
+void StringLiteral() : {} {
+<STRING_LITERAL>
+}
+
+void  BoolLiteral() :
+{}
+{
+  <BOOL_LITERAL>
+}
+
+void  IntegerLiteral() :
+{}
+{
+    <INTEGER_LITERAL>
+}
+
+
+void  RectangularDomainLiteral() :
+{}
+{
+ "{"
+// RangeExpressionList()
+  RangeExpression() ("," RangeExpression())*
+ "}"
+}
+
+void  RangeExpressionList() :
+{}
+{
+    LOOKAHEAD(3)RangeExpression()
+    |LOOKAHEAD(3)RangeExpression() "," RangeExpressionList()
+}
+
+void  RangeExpression() :
+{}
+{
+    CountedRangeExpression()
+    |AlignedRangeExpression()
+    |SlicedRangeExpression()
+    |Expression()
+    |StridedRangeExpression()
+}
+
+void  CountedRangeExpression() :
+{}
+{
+    "#" Expression()
+}
+
+void  StridedRangeExpression() :
+{}
+{
+    <BY> StepExpression()
+}
+
+void  SlicedRangeExpression() :
+{}
+{
+    ("(" RangeExpression() ")")
+    | ("[" RangeExpression() "]")
+}
+
+void AlignedRangeExpression() :
+{}
+{
+    <ALIGN> Expression()
+}
+
+
+void  StepExpression() :
+{}
+{
+  Expression()
+}
+
+void  DomainLiteral() :
+{}
+{
+    LOOKAHEAD(3)RectangularDomainLiteral()
+    |LOOKAHEAD(3)AssociativeDomainLiteral()
+}
+
+void  AssociativeDomainLiteral() :
+{}
+{
+ "{" AssociativeExpressionList() "}"
+}
+
+void  AssociativeExpressionList() :
+{}
+{
+    LOOKAHEAD(3)NonRangeExpression()
+    |LOOKAHEAD(3)NonRangeExpression() "," AssociativeExpressionList()
+}
+
+void  NonRangeExpression() :
+{}
+{
+ Expression()
+}
+
+//TODO
+TOKEN : {
+< STRING_LITERAL : ("\"" (~["\""]|("\\"~[]))* "\"")
+    | ("\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
+    | ("'" (~["'"]|("\\"~[]))* "'")
+    | ("'''" (~["'"]|("\\"~[]))* "'''")>
+|< BYTES_LITERAL : ("b\"" (~["\""]|("\\"~[]))* "\"")
+    | ("b\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
+    | ("b'" (~["'"]|("\\"~[]))* "'")
+    | ("b'''" (~["'"]|("\\"~[]))* "'''")>
+}
+
+void  BytesLiteral() :
+{}
+{
+    <BYTES_LITERAL>
+}
+
+void  Digits() :
+{}
+{
+  <INTEGER_LITERAL>
+}
+
