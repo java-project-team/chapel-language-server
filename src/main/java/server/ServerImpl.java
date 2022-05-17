@@ -1,12 +1,13 @@
 package server;
 import org.eclipse.lsp4j.*;
-import org.eclipse.lsp4j.services.LanguageServer;
-import org.eclipse.lsp4j.services.TextDocumentService;
-import org.eclipse.lsp4j.services.WorkspaceService;
+import org.eclipse.lsp4j.services.*;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
-public class ServerImpl implements LanguageServer {
+public class ServerImpl implements LanguageServer, LanguageClientAware {
+    private static final Logger LOG = Logger.getLogger("server");
+    private LanguageClient client = null;
     @Override
     public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
         ServerCapabilities capabilities = new ServerCapabilities();
@@ -19,13 +20,8 @@ public class ServerImpl implements LanguageServer {
 //        var provider = new SemanticTokensWithRegistrationOptions();
 
 //        capabilities.setSemanticTokensProvider();
-
-//        var serverLauncher =
-//                LSPLauncher.createServerLauncher(
-//                        ServiceEndpoints.toServiceObject(, LanguageServer.class),
-//                        System.in,
-//                        System.out);
-        return null;
+        LOG.info("exiting");
+        return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }
 
     @Override
@@ -42,12 +38,46 @@ public class ServerImpl implements LanguageServer {
 
     @Override
     public TextDocumentService getTextDocumentService() {
-        return null;
+        return new TextDocumentService() {
+            @Override
+            public void didOpen(DidOpenTextDocumentParams params) {
+
+            }
+
+            @Override
+            public void didChange(DidChangeTextDocumentParams params) {
+
+            }
+
+            @Override
+            public void didClose(DidCloseTextDocumentParams params) {
+
+            }
+
+            @Override
+            public void didSave(DidSaveTextDocumentParams params) {
+
+            }
+        };
     }
 
     @Override
     public WorkspaceService getWorkspaceService() {
-        return null;
+        return new WorkspaceService() {
+            @Override
+            public void didChangeConfiguration(DidChangeConfigurationParams params) {
+
+            }
+
+            @Override
+            public void didChangeWatchedFiles(DidChangeWatchedFilesParams params) {
+
+            }
+        };
     }
 
+    @Override
+    public void connect(LanguageClient client) {
+        this.client = client;
+    }
 }

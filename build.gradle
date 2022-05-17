@@ -1,14 +1,22 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.johnrengelman.shadow' version "6.0.0"
 }
 
 application {
     mainClass = 'Main'
 }
 
-group 'org.example'
+group 'project'
 version '1.0-SNAPSHOT'
+// Shadow task depends on Jar task, so these will be reflected for Shadow as well
+mainClassName = "Main"
+shadowJar {
+    archiveBaseName.set('server')
+    archiveClassifier.set('')
+    archiveVersion.set('')
+}
 
 repositories {
     mavenCentral()

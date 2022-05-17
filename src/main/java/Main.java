@@ -1,25 +1,29 @@
+import org.eclipse.lsp4j.jsonrpc.Launcher;
+import org.eclipse.lsp4j.launch.LSPLauncher;
+import org.eclipse.lsp4j.services.LanguageClient;
 import parser.Parser;
 import parser.SimpleNode;
+import server.ServerImpl;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.InputStream;
+import java.io.*;
+import java.net.Socket;
 
 public class Main {
     public static void main(String[] args) {
-//        File f = new File("/home/rmzs/IdeaProjects/scala-language-server/src/test/resources/requestExample");
-//        try {
-//            var strean = new FileInputStream(f);
-//            Parser parser = new Parser(strean);
-//            SimpleNode n = parser.File();
-//            n.dump("");
-//            System.out.println("Thank you.");
-//        } catch (Exception e) {
-//            System.out.println("Oops.");
-//            System.out.println(e.getMessage());
+//        String port = args[0];
+//        try (Socket socket = new Socket("localhost", Integer.parseInt(port))){
+//            InputStream in = socket.getInputStream();
+//            OutputStream out = socket.getOutputStream();
+
+            ServerImpl server = new ServerImpl();
+            Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, System.in, System.out);
+
+            LanguageClient client = launcher.getRemoteProxy();
+            server.connect(client);
+
+            launcher.startListening();
+//        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
-
     }
 }
