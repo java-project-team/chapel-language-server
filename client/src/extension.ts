@@ -17,9 +17,9 @@ let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(
-		path.join('server', 'out', 'server.js')
-	);
+	// const serverModule = context.asAbsolutePath(
+	// 	path.join('server', 'out', 'server.js')
+	// );
 	// The debug options for the server
 	// --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
 	const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
@@ -27,12 +27,16 @@ export function activate(context: ExtensionContext) {
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
 	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-			options: debugOptions
-		}
+		// run: { module: serverModule, transport: TransportKind.ipc },
+		// debug: {
+		// 	module: serverModule,
+		// 	transport: TransportKind.ipc,
+		// 	options: debugOptions
+		// }
+
+		command: "java",
+		args: ["-jar", path.resolve(context.extensionPath, "chapel-server", "build", "libs", "server.jar")]
+		// args: ["-jar", "/home/rmzs/IdeaProjects/scala-language-server/chapel-server/build/libs/server.jar"]
 	};
 
 	// Options to control the language client
