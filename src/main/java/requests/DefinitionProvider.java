@@ -1,12 +1,8 @@
 package requests;
 
 import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
 import parser.Parser;
-import parser.SimpleNode;
-
-import java.net.URISyntaxException;
+import parser.SimpleNode;;
 import java.util.Objects;
 
 public class DefinitionProvider {
@@ -36,7 +32,7 @@ public class DefinitionProvider {
 
     public static SimpleNode findProviderVariable(SimpleNode vertex) {
         if (vertex == null) {
-            System.out.println("Null in findProviderVariable");
+            //System.out.println("Null in findProviderVariable");
             return null;
         }
 

@@ -1,7 +1,6 @@
 package requests;
 
 import org.eclipse.lsp4j.Location;
-
 import parser.SimpleNode;
 
 public class Vertex {
