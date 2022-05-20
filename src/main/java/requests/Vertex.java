@@ -11,18 +11,7 @@ public class Vertex {
             return null;
         }
 
-        /*System.out.println("in Vertex.find::: " +
-                location.getRange().getStart().getLine() + "-" +
-                location.getRange().getStart().getCharacter() + ", " +
-                location.getRange().getEnd().getLine() + "-" +
-                location.getRange().getEnd().getCharacter());*/
-
         if (root.jjtGetNumChildren() == 0) {
-            /*System.out.println("in Vertex.find, (root.jjtGetNumChildren() == 0)::: " + root.jjtGetFirstToken().image + " " +
-                    root.jjtGetFirstToken().beginLine + "-" +
-                    root.jjtGetFirstToken().beginColumn + ", " +
-                    root.jjtGetFirstToken().endLine + "-" +
-                    root.jjtGetFirstToken().endColumn);*/
             if (root.jjtGetFirstToken().beginLine <= location.getRange().getStart().getLine() &&
                 root.jjtGetFirstToken().endLine >= location.getRange().getEnd().getLine() &&
                 root.jjtGetFirstToken().beginColumn <= location.getRange().getStart().getCharacter() &&

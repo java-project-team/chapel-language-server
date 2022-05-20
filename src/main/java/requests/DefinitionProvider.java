@@ -5,87 +5,12 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import parser.Parser;
 import parser.SimpleNode;
+
 import java.net.URISyntaxException;
 import java.util.Objects;
 
 public class DefinitionProvider {
-    public static void main(String[] args) throws URISyntaxException {
-        SimpleNode root = Parser.parse("./src/test/resources/a.txt");
-        {
-            Location location = new Location("./src/test/resources/a.txt", new Range(new Position(2, 1), new Position(2, 1)));
-            SimpleNode res = find(location, root);
-
-            System.out.println("\nANSWER1");
-
-            if (res == null) {
-                System.out.println(":((((");
-            } else {
-                System.out.println(res.toString());
-                System.out.println(res.jjtGetFirstToken().image + " " +
-                        res.jjtGetFirstToken().beginLine + "-" +
-                        res.jjtGetFirstToken().beginColumn + ", " +
-                        res.jjtGetLastToken().endLine + "-" +
-                        res.jjtGetLastToken().endColumn);
-            }
-        }
-
-        {
-            Location location = new Location("./src/test/resources/a.txt", new Range(new Position(7, 5), new Position(7, 5)));
-            SimpleNode res = find(location, root);
-
-            System.out.println("\nANSWER2");
-
-            if (res == null) {
-                System.out.println(":((((");
-            } else {
-                System.out.println(res.toString());
-                System.out.println(res.jjtGetFirstToken().image + " " +
-                        res.jjtGetFirstToken().beginLine + "-" +
-                        res.jjtGetFirstToken().beginColumn + ", " +
-                        res.jjtGetLastToken().endLine + "-" +
-                        res.jjtGetLastToken().endColumn);
-            }
-        }
-
-        {
-            Location location = new Location("./src/test/resources/a.txt", new Range(new Position(10, 1), new Position(10, 1)));
-            SimpleNode res = find(location, root);
-
-            System.out.println("\nANSWER3");
-
-            if (res == null) {
-                System.out.println(":((((");
-            } else {
-                System.out.println(res.toString());
-                System.out.println(res.jjtGetFirstToken().image + " " +
-                        res.jjtGetFirstToken().beginLine + "-" +
-                        res.jjtGetFirstToken().beginColumn + ", " +
-                        res.jjtGetLastToken().endLine + "-" +
-                        res.jjtGetLastToken().endColumn);
-            }
-        }
-
-        {
-            Location location = new Location("./src/test/resources/a.txt", new Range(new Position(13, 1), new Position(13, 1)));
-            SimpleNode res = find(location, root);
-
-            System.out.println("\nANSWER4");
-
-            if (res == null) {
-                System.out.println(":((((");
-            } else {
-                System.out.println(res.toString());
-                System.out.println(res.jjtGetFirstToken().image + " " +
-                        res.jjtGetFirstToken().beginLine + "-" +
-                        res.jjtGetFirstToken().beginColumn + ", " +
-                        res.jjtGetLastToken().endLine + "-" +
-                        res.jjtGetLastToken().endColumn);
-            }
-        }
-
-    }
-
-    static SimpleNode find(Location location, SimpleNode root) {
+    public static SimpleNode find(Location location, SimpleNode root) {
         if (root == null) {
             root = Parser.parse(location.getUri());
         }
@@ -94,7 +19,7 @@ public class DefinitionProvider {
         return findProviderVariable(vertex);
     }
 
-    static boolean isVarDefinition(SimpleNode vertexVariable, SimpleNode vertex) {
+    public static boolean isVarDefinition(SimpleNode vertexVariable, SimpleNode vertex) {
         if (!Objects.equals(vertex.toString(), "VariableDeclarationStatement")) {
             return false;
         }
@@ -109,7 +34,7 @@ public class DefinitionProvider {
         return false;
     }
 
-    static SimpleNode findProviderVariable(SimpleNode vertex) {
+    public static SimpleNode findProviderVariable(SimpleNode vertex) {
         if (vertex == null) {
             System.out.println("Null in findProviderVariable");
             return null;
