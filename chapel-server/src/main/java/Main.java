@@ -10,20 +10,21 @@ import java.net.Socket;
 
 public class Main {
     public static void main(String[] args) {
-//        String port = args[0];
-//        try (Socket socket = new Socket("localhost", Integer.parseInt(port))){
-//            InputStream in = socket.getInputStream();
-//            OutputStream out = socket.getOutputStream();
+        ServerImpl server = new ServerImpl();
+        Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, System.in, System.out);
 
-            ServerImpl server = new ServerImpl();
-            Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, System.in, System.out);
+        LanguageClient client = launcher.getRemoteProxy();
+        server.connect(client);
+        launcher.startListening();
 
-            LanguageClient client = launcher.getRemoteProxy();
-            server.connect(client);
 
-            launcher.startListening();
-//        } catch (IOException e) {
-//            e.printStackTrace();
+//        var node =
+//                Parser.parse(
+//                        "/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java"
+//                );
+//        assert node != null;
+//        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+//            System.out.println(node.jjtGetChild(i));
 //        }
     }
 }

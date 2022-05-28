@@ -1,11 +1,14 @@
 options
 {
   LOOKAHEAD=3;
-//  DEBUG_PARSER = true;
   JJTREE_OUTPUT_DIRECTORY = "parser";
+  TRACK_TOKENS = true;
+  STATIC = false;
 }
 PARSER_BEGIN(Parser)
 package parser;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 
 /**
  * Simple brace matcher.
@@ -23,6 +26,26 @@ public class Parser {
           System.out.println("Oops.");
           System.out.println(e.getMessage());
           e.printStackTrace();
+        }
+  }
+  public static SimpleNode parse(String path) {
+        Parser parser;
+        if (path == null) {
+            parser = new Parser(System.in);
+        }
+        else {
+            try {
+                parser = new Parser(new FileInputStream(path));
+                return parser.File();
+            }
+            catch (Exception ignored) {
+                return null;
+            }
+        }
+        try {
+            return parser.File();
+        } catch (Exception e) {
+            return null;
         }
   }
 
@@ -786,8 +809,7 @@ void VariableKind() :
 void VariableDeclarationList() :
 {}
 {
-    LOOKAHEAD(3)VariableDeclaration() "," VariableDeclarationList()
-    |LOOKAHEAD(3)VariableDeclaration()
+    VariableDeclaration() ("," VariableDeclaration() )*
 }
 
 
@@ -1632,7 +1654,7 @@ void  NonRangeExpression() :
  Expression()
 }
 
-//TODO
+
 TOKEN : {
 < STRING_LITERAL : ("\"" (~["\""]|("\\"~[]))* "\"")
     | ("\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
