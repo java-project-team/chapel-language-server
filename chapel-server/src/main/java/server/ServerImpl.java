@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
     private LanguageClient client = null;
-    private Gson gson = new Gson();
+    private final Gson gson = new Gson();
 
     @Override
     public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
