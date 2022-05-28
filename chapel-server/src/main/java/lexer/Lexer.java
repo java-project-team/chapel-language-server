@@ -1,4 +1,4 @@
-package Lexer;
+package lexer;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -54,36 +54,36 @@ public class Lexer {
         return resList;
     }
 
-//    public List<Token> ran(String path) {
-//        List<String> lines;
-//        try {
-//            lines = Files.lines(Paths.get(path)).toList();
-//        } catch (IOException e) {
-//            System.err.print("The file cannot be opened\n");
-//            return null;
-//        }
-//
-//        List<Token> res = new ArrayList<>();
-//        for (TemplateToken type : tokens) {
-//            res.addAll(find(lines, type));
-//        }
-//
-//        res.sort((a, b) -> {
-//            if (a.lineNumber != b.lineNumber) {
-//                return a.lineNumber - b.lineNumber;
-//            }
-//            if (a.posBegin != b.posBegin) {
-//                return a.posBegin - b.posBegin;
-//            }
-//            System.err.print("Этого не должно было произойти, сочувствую: " + a.lineNumber + ", " + a.posBegin + "; a = " + a.posEnd + "; b = " + b.posEnd + "\n");
-//            if (a.posEnd != b.posEnd) {
-//                return a.posEnd - b.posEnd;
-//            }
-//            return 0;
-//        });
-//
-//        return res;
-//    }
+    public List<Token> ran(String path) {
+        List<String> lines;
+        try {
+            lines = Files.lines(Paths.get(path)).toList();
+        } catch (IOException e) {
+            System.err.print("The file cannot be opened\n");
+            return null;
+        }
+
+        List<Token> res = new ArrayList<>();
+        for (TemplateToken type : tokens) {
+            res.addAll(find(lines, type));
+        }
+
+        res.sort((a, b) -> {
+            if (a.lineNumber != b.lineNumber) {
+                return a.lineNumber - b.lineNumber;
+            }
+            if (a.posBegin != b.posBegin) {
+                return a.posBegin - b.posBegin;
+            }
+            System.err.print("Этого не должно было произойти, сочувствую: " + a.lineNumber + ", " + a.posBegin + "; a = " + a.posEnd + "; b = " + b.posEnd + "\n");
+            if (a.posEnd != b.posEnd) {
+                return a.posEnd - b.posEnd;
+            }
+            return 0;
+        });
+
+        return res;
+    }
 
     public void restart() {
         checked = new HashMap<>();
