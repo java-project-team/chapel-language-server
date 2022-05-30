@@ -37,6 +37,7 @@ public class FileInformation {
             functions.clear();
             isChanged = false;
 
+            System.out.println("file2: " + path);
             root = Parser.parse(path);
             if (root != null) {
                 root = (SimpleNode) root.jjtGetChild(0);

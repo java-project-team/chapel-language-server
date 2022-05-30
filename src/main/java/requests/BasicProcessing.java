@@ -19,7 +19,13 @@ public class BasicProcessing {
     }
 
     public void addFile(String file) {
-        files.put(file, new FileInformation(file));
+        if (!files.containsKey(file)) {
+            System.out.println("file: " + file);
+            files.put(file, new FileInformation(file));
+        }
+        else {
+            files.get(file).update();
+        }
     }
 
     public void removeFile(String file) {

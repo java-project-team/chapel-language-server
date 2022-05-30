@@ -4,6 +4,7 @@ options
   //DEBUG_PARSER = true;
   JJTREE_OUTPUT_DIRECTORY = "parser";
   TRACK_TOKENS = true;
+  STATIC = false; // Это для перепарсинга
 //  DEBUG_LOOKAHEAD = true;
 //  DEBUG_TOKEN_MANAGER = true;
 }
@@ -245,7 +246,7 @@ TOKEN :
 | < SUBDOMAIN : "subdomain" >
 | < SYNC : "sync" >
 | < THEN : "then" >
-//| < THIS : "this" > // todo что то придумать с ним
+//| < THIS : "this" > // TODO что то придумать с ним
 | < THROW : "throw" >
 | < THROWS: "throws" >
 //| < TRUE : "true" >

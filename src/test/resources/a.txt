@@ -18,3 +18,5 @@ proc foo() {
 
 config const printLocaleName = true;
 printLocaleName = false;
+
+foo();

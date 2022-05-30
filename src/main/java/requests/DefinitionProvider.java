@@ -2,17 +2,37 @@ package requests;
 
 import org.eclipse.lsp4j.Location;
 import parser.Parser;
-import parser.SimpleNode;;
+import parser.SimpleNode;
+
+import java.util.List;
 import java.util.Objects;
 
 public class DefinitionProvider {
-    public static SimpleNode find(Location location, SimpleNode root) {
+    private static BasicProcessing filesInformation;
+
+    public DefinitionProvider(BasicProcessing filesInformation) {
+        this.filesInformation = filesInformation;
+    }
+
+    public SimpleNode find(Location location, SimpleNode root) {
+        System.out.println(location.getUri());
+        filesInformation.addFile(location.getUri());
+
         if (root == null) {
             root = Parser.parse(location.getUri());
         }
         SimpleNode vertex = Vertex.find(location, root);
-        // TODO if (isVar)
-        return findProviderVariable(vertex);
+
+        if (vertex == null) {
+            return null;
+        }
+
+        if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
+            return findProviderFunction(location.getUri().toString(), vertex.jjtGetFirstToken().image);
+        }
+        else /*if ()*/ { // TODO здесь нужно проверить, не тип ли это
+            return findProviderVariable(vertex);
+        }
     }
 
     public static boolean isVarDefinition(SimpleNode vertexVariable, SimpleNode vertex) {
@@ -30,7 +50,17 @@ public class DefinitionProvider {
         return false;
     }
 
-    public static SimpleNode findProviderVariable(SimpleNode vertex) {
+    private static SimpleNode findProviderFunction(String file, String function) { // TODO тут по хорошему list надо бы
+        List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
+        for (DefinitionFunction i : functions) {
+            if (Objects.equals(i.getName(), function)) {
+                return i.getNode();
+            }
+        }
+        return null;
+    }
+
+    private static SimpleNode findProviderVariable(SimpleNode vertex) {
         if (vertex == null) {
             //System.out.println("Null in findProviderVariable");
             return null;
