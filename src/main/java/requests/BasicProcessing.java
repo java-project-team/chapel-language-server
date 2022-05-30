@@ -3,6 +3,7 @@ package requests;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class BasicProcessing {
     private Map<String, FileInformation> files;
@@ -12,6 +13,10 @@ public class BasicProcessing {
         for (var file : files) {
             this.files.put(file, new FileInformation(file));
         }
+    }
+
+    public Set<String> getNamesFiles() {
+        return files.keySet();
     }
 
     public FileInformation getFileInformation(String file) {

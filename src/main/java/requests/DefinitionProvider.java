@@ -1,11 +1,11 @@
 package requests;
 
 import org.eclipse.lsp4j.Location;
+import org.eclipse.xtext.xbase.lib.Pair;
 import parser.Parser;
 import parser.SimpleNode;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class DefinitionProvider {
     private static BasicProcessing filesInformation;
@@ -14,7 +14,7 @@ public class DefinitionProvider {
         this.filesInformation = filesInformation;
     }
 
-    public SimpleNode find(Location location, SimpleNode root) {
+    public List<Pair<SimpleNode, String>> find(Location location, SimpleNode root) {
         System.out.println(location.getUri());
         filesInformation.addFile(location.getUri());
 
@@ -28,10 +28,15 @@ public class DefinitionProvider {
         }
 
         if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
-            return findProviderFunction(location.getUri().toString(), vertex.jjtGetFirstToken().image);
+            return findProviderFunction(location.getUri(), vertex.jjtGetFirstToken().image);
         }
         else /*if ()*/ { // TODO здесь нужно проверить, не тип ли это
-            return findProviderVariable(vertex);
+            List<Pair<SimpleNode, String>> ans = new ArrayList<>();
+            var res = findProviderVariable(vertex);
+            if (res != null) {
+                ans.add(new Pair<>(res, location.getUri()));
+            }
+            return ans;
         }
     }
 
@@ -50,14 +55,30 @@ public class DefinitionProvider {
         return false;
     }
 
-    private static SimpleNode findProviderFunction(String file, String function) { // TODO тут по хорошему list надо бы
-        List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
-        for (DefinitionFunction i : functions) {
-            if (Objects.equals(i.getName(), function)) {
-                return i.getNode();
+    private static List<Pair<SimpleNode, String>> findProviderFunction(String file, String function) { // TODO тут по хорошему list надо бы
+        List<Pair<SimpleNode, String>> ans = new ArrayList<>();
+        {
+            List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
+            for (DefinitionFunction i : functions) {
+                if (Objects.equals(i.getName(), function)) {
+                    ans.add(new Pair<>(i.getNode(), file));
+                }
+            }
+            if (!ans.isEmpty()) {
+                return ans;
             }
         }
-        return null;
+
+        Set<String> namesFiles = filesInformation.getNamesFiles();
+        for (String name : namesFiles) {
+            List<DefinitionFunction> functions = filesInformation.getFileInformation(name).getFunctions();
+            for (DefinitionFunction i : functions) {
+                if (Objects.equals(i.getName(), function)) {
+                    ans.add(new Pair<>(i.getNode(), name));
+                }
+            }
+        }
+        return ans;
     }
 
     private static SimpleNode findProviderVariable(SimpleNode vertex) {
