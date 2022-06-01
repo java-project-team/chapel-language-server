@@ -7,25 +7,52 @@ import org.eclipse.lsp4j.services.*;
 import parser.Parser;
 import parser.SimpleNode;
 
+import java.io.File;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+
+import requests.FileInformation;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
     private LanguageClient client = null;
     private final Gson gson = new Gson();
+    private List<WorkspaceFolder> folders;
+    private HashMap<String, FileInformation> fileInformationMap = new HashMap<>();
 
     @Override
     public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setCodeActionProvider(false);
-        capabilities.setCallHierarchyProvider(false);
         capabilities.setColorProvider(false);
         capabilities.setDeclarationProvider(false);
         capabilities.setDefinitionProvider(false);
         capabilities.setHoverProvider(false);
+
+        capabilities.setCallHierarchyProvider(true);
+
+        folders = params.getWorkspaceFolders();
+        // todo не работает
+//        for (var folder : folders) {
+//            try (var pathsStream = Files.walk(Path.of(new URI(folder.getUri())))) {
+//                pathsStream.forEach(path -> {
+//                    if (path.toFile().isFile()) {
+//                        fileInformationMap.put(path.toUri().toString(),
+//                                new FileInformation(path.toAbsolutePath().toString()));
+//                    }
+//                });
+//            } catch (Exception e) {
+//                LOG.warning(e.getLocalizedMessage());
+//            }
+//        }
+//        for (var e : fileInformationMap.entrySet()) {
+//            LOG.info(e.getValue().getFunctions().toString());
+//        }
 
         var codeLensOptions = new CodeLensOptions();
         codeLensOptions.setWorkDoneProgress(false);
@@ -36,9 +63,14 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         execOptions.setCommands(Collections.singletonList(ServerConstants.InsertVarTypeCommand));
         capabilities.setExecuteCommandProvider(execOptions);
 
-//        var provider = new SemanticTokensWithRegistrationOptions();
+        var semanticTokensProvider = new SemanticTokensWithRegistrationOptions();
+        semanticTokensProvider.setFull(true);
+        semanticTokensProvider.setLegend(
+                new SemanticTokensLegend(
+                        List.of("class", "enum", "variable", "enumMember", "function", "method", "keyword"),
+                        List.of()));
+        capabilities.setSemanticTokensProvider(semanticTokensProvider);
 
-//        capabilities.setSemanticTokensProvider();
         LOG.info("Initialized");
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }
@@ -51,7 +83,6 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
     @Override
     public void exit() {
-
         System.exit(0);
     }
 
@@ -61,6 +92,19 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
     }
 
     private class ChapelTextDocumentService implements TextDocumentService {
+
+        @Override
+        public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
+            try {
+                var doc = new File(new URI(params.getTextDocument().getUri()));
+                var rootNode = Parser.parse(doc.getAbsolutePath());
+
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
+        }
+
         @Override
         public void didOpen(DidOpenTextDocumentParams params) {
 
@@ -68,8 +112,6 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         @Override
         public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
-
-
             List<CodeLens> list = new ArrayList<>(getVarTypeLensesInDocument(params.getTextDocument()));
             return CompletableFuture.completedFuture(list);
         }
@@ -138,14 +180,13 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         private String getTitleForPrimitive(SimpleNode child) {
             for (int i = 1; i < child.jjtGetNumChildren(); i++) {
                 var part = child.jjtGetChild(i);
-                LOG.info("1");
                 if (part.toString().equals("TypePart")) {
-                    LOG.info("2");
+//                    LOG.info("2");
                     return "";
                 } else if (part.toString().equals("InitializationPart")) {
                     if (part.jjtGetChild(0).jjtGetChild(0).toString().equals("LiteralExpression")
                     ) {
-                        LOG.info("4");
+//                        LOG.info("4");
                         return part.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).toString();
                     }
                 }
@@ -172,6 +213,12 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         @Override
         public void didSave(DidSaveTextDocumentParams params) {
 
+        }
+
+        @Override
+        public CompletableFuture<List<CallHierarchyItem>> prepareCallHierarchy(CallHierarchyPrepareParams params) {
+
+            return null;
         }
     }
 
