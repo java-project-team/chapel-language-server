@@ -1,14 +1,9 @@
 {
   "name": "lsp-sample",
-  "description": "A language server example",
+  "description": "A chapel LS",
   "author": "Microsoft Corporation",
   "license": "MIT",
   "version": "1.0.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Microsoft/vscode-extension-samples"
-  },
-  "publisher": "vscode-samples",
   "categories": [],
   "keywords": [
     "multi-root ready"

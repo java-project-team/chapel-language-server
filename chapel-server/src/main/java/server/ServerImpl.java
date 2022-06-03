@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 import requests.FileInformation;
+import server.semantic.tokens.ChapelModule;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -98,10 +99,20 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             try {
                 var doc = new File(new URI(params.getTextDocument().getUri()));
                 var rootNode = Parser.parse(doc.getAbsolutePath());
-
+                SemanticTokens ans = findSemanticTokens(rootNode);
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
+            return CompletableFuture.completedFuture(new SemanticTokens(new ArrayList<>()));
+        }
+
+        private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
+            ChapelModule currentFile = createChapelModule(rootNode);
+            return null;
+        }
+
+        private ChapelModule createChapelModule(SimpleNode rootNode) {
+
             return null;
         }
 
