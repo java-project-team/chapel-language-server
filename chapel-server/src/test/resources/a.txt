@@ -1,20 +1,28 @@
-var x = 23;
-x += 34;
+module OurModule {
 
+// We can use modules inside of other modules.
+// Time is one of the standard modules.
+  use Time;
 
-{
-    var y = 34;
-    y = 43;
-}
+// We'll use this procedure in the parallelism section.
+  proc countdown(seconds: int) {
+    for i in 1..seconds by -1 {
+      writeln(i);
+      sleep(1);
+    }
+  }
 
-y = 54;
+// It is possible to create arbitrarily deep module nests.
+// i.e. submodules of OurModule
+  module ChildModule {
+    proc foo() {
+      writeln("ChildModule.foo()");
+    }
+  }
 
-var y = 5;
-y = 342;
-
-
-proc foo() {
-}
-
-config const printLocaleName = true;
-printLocaleName = false;
+  module SiblingModule {
+    proc foo() {
+      writeln("SiblingModule.foo()");
+    }
+  }
+} // end OurModule

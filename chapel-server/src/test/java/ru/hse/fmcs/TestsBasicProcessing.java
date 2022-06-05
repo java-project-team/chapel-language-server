@@ -1,6 +1,7 @@
 package ru.hse.fmcs;
 
 import org.junit.jupiter.api.Test;
+import parser.Parser;
 import requests.BasicProcessing;
 
 import java.util.List;
@@ -8,6 +9,13 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestsBasicProcessing {
+    @Test
+    public void rat() {
+        var x = Parser.parse("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/a.txt");
+        assert x != null;
+        x.dump("");
+    }
+
     @Test
     public void test1() {
         BasicProcessing basicProcessing = new BasicProcessing(List.of("./src/test/resources/a.txt"));
