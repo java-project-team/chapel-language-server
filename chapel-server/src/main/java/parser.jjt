@@ -1,17 +1,15 @@
 options
 {
   LOOKAHEAD=3;
-  //DEBUG_PARSER = true;
   JJTREE_OUTPUT_DIRECTORY = "parser";
   TRACK_TOKENS = true;
-  STATIC = false; // Это для перепарсинга
-//  DEBUG_LOOKAHEAD = true;
-//  DEBUG_TOKEN_MANAGER = true;
+  STATIC = false;
 }
 PARSER_BEGIN(Parser)
 package parser;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+
 /**
  * Simple brace matcher.
  */
@@ -30,7 +28,6 @@ public class Parser {
           e.printStackTrace();
         }
   }
-
   public static SimpleNode parse(String path) {
         Parser parser;
         if (path == null) {
@@ -45,12 +42,12 @@ public class Parser {
                 return null;
             }
         }
-            try {
-                return parser.File();
-            } catch (Exception e) {
-                return null;
-            }
-    }
+        try {
+            return parser.File();
+        } catch (Exception e) {
+            return null;
+        }
+  }
 
 }
 
@@ -60,7 +57,7 @@ SKIP :
 {
   " "
 | "\t"
-| "\n"
+| <NEWLINE : "\n">
 | "\r"
 | <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")?>
 | <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
@@ -305,14 +302,19 @@ void AssociativeExpr() :
 void RangeLiteral() :
 {}
 {
-//    [Expression() ] <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
     <RANGESPEC> ["<"] [LOOKAHEAD(2)Expression()]
 }
 
-void Block() :
+void Block()#void:
 {}
 {
-    (Statement())* <EOF>
+    (
+    try {
+        Statement()
+    } catch (ParseException e) {
+        error_skipto(SEMICOLON);
+    }
+    )* <EOF>
 }
 
 void  ExpressionStatement() :
@@ -324,15 +326,14 @@ void  ExpressionStatement() :
 void Statement() :
 {}
 {
+//    try {
     LOOKAHEAD(3)BlockStatement()
     | LOOKAHEAD(3)IfStatement()
-//    | LOOKAHEAD(3)SwapStatement()
     |  LOOKAHEAD(3)ForStatement()
     |  LOOKAHEAD(3)SelectStatement()
     |  LOOKAHEAD(3)WhileDoStatement()
     |  LOOKAHEAD(3)DoWhileStatement()
     |  LOOKAHEAD(3)LabelStatement()
-//    |  LOOKAHEAD(3)IoStatement()
     |  LOOKAHEAD(3)BreakStatement()
     |  LOOKAHEAD(3)ContinueStatement()
     |  LOOKAHEAD(3)ParamForStatement()
@@ -363,28 +364,18 @@ void Statement() :
     | LOOKAHEAD(3)ExpressionStatement()
 }
 
-void SwapStatement() :
-{}
-{
-    LvalueExpression() <SWAP> LvalueExpression()
-}
-
-void IoStatement() :
-{}
-{
-    IOExpr() ";"
-}
-
-void IOExpr() :
-{}
-{
-    Expression() (<IO> Expression())+
-}
-
-void IOExprRR() :
-{}
-{
-    Expression() [<IO> IOExprRR()]
+JAVACODE
+void error_skipto(int kind) {
+//  System.out.println(e.toString());  // print the error message
+  Token t;
+  // consume tokens all the way up to a token of "kind" - use a do-while loop
+  // rather than a while because the current token is the one immediately before
+  // the erroneous token (in our case the token immediately before what should
+  // have been "if"/"while".
+  do {
+    t = getNextToken();
+  }
+  while (t.kind != kind && t.kind != NEWLINE && t.kind != EOF);
 }
 
 void SelectStatement() :
@@ -678,16 +669,8 @@ void ClassInherit() :
 void BasicClassType() :
 {}
 {
-    LOOKAHEAD(3)<ID> "(" (NamedExpression() ("," NamedExpression())*) ")"
+    LOOKAHEAD(3)<ID> "(" NamedExpression() ("," NamedExpression())* ")"
     |LOOKAHEAD(3)<ID>
-}
-
-void  NamedExpressionList() :
-{}
-{
-
-    LOOKAHEAD(3)NamedExpression() "," NamedExpressionList()
-    |LOOKAHEAD(3)NamedExpression()
 }
 
 void  NamedExpression() :
@@ -826,8 +809,7 @@ void VariableKind() :
 void VariableDeclarationList() :
 {}
 {
-    LOOKAHEAD(3)VariableDeclaration() "," VariableDeclarationList()
-    |LOOKAHEAD(3)VariableDeclaration()
+    VariableDeclaration() ("," VariableDeclaration() )*
 }
 
 
@@ -1022,13 +1004,6 @@ void  ForallStatement() :
     | ("[" (IndexVarDeclaration() | IteratableExpression())
         [<IN> IteratableExpression()] [TaskIntentClause()] "]" Statement()
         )
-
-//  LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-//| LOOKAHEAD(3)<FORALL> IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] BlockStatement()
-//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] <DO> Statement()
-//| LOOKAHEAD(3)<FORALL> IteratableExpression() [TaskIntentClause()] BlockStatement()
-//| LOOKAHEAD(3)"[" IndexVarDeclaration() <IN> IteratableExpression() [TaskIntentClause()] "]" Statement()
-//| LOOKAHEAD(3)"[" IteratableExpression() [TaskIntentClause()] "]" Statement()
 }
 
 void  DeleteStatement() :
@@ -1052,90 +1027,10 @@ LOOKAHEAD(3)Expression() <AS> VariableKind() Identifier()
 |LOOKAHEAD(3)Expression()
 }
 
-void ManagerExpressionList() :
-{}
-{
-    ManagerExpression()
-//    | ManagerExpressionList() ","  ManagerExpression()
-}
-
-void AssignStatement() :
-{}
-{
-    LvalueExpression() AssignOperators() Expression() ";"
-}
-
-void LvalueExpression() :
-{}
-{
-(LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)MemberAccessExpression()
-//|LOOKAHEAD(3)CallExpression()
-|LOOKAHEAD(3)ParenthesizedExpression())
-( ("[" (NamedExpression() ("," NamedExpression())*) "]") | ("(" (NamedExpression() ("," NamedExpression())*) ")") )*
-}
-//void  LvalueExpression() :
-//{}
-//{
-//    (CallExpressionRightRecursion())*
-//    (LOOKAHEAD(3)Identifier()
-//    |LOOKAHEAD(3)ParenthesizedExpression()
-//    |LOOKAHEAD(3)MemberAccessExpression()
-//    )
-//
-//}
-
-void CallExpressionRightRecursion() :
-{}
-{
-    "[" (NamedExpression() ("," NamedExpression())*)"]"| "(" (NamedExpression() ("," NamedExpression())*)")"
-}
-
 void  ParenthesizedExpression() :
 {}
 {
     "(" Expression() ")"
-}
-
-void  CallExpression() :
-{}
-{
- LvalueExpression() (("[" (NamedExpression() ("," NamedExpression())*)"]") | ("(" (NamedExpression() ("," NamedExpression())*)")"))
-}
-
-void  MemberAccessExpression() :
-{}
-{
-    [Expression() <DOT>]
-    (
-    Expression() "(" (NamedExpression() ("," NamedExpression())*) ")" | Expression() "[" (NamedExpression() ("," NamedExpression())*) "]" | Identifier()
-    |
-    Identifier()
-    )
-}
-
-void  MethodCallExpression() :
-{}
-{
-ReceiverClause()
-(
-  (Expression()"(" (NamedExpression() ("," NamedExpression())*) ")")
-| (Expression()"[" (NamedExpression() ("," NamedExpression())*) "]")
-| Identifier()
-)
-
-}
-
-void  ReceiverClause() :
-{}
-{
-    Expression() <DOT>
-}
-
-void  FieldAccessExpression() :
-{}
-{
-    ReceiverClause() Identifier()
 }
 
 
@@ -1172,14 +1067,6 @@ void IfStatement() :
     [LOOKAHEAD(3)<ELSE> Statement()]
 }
 
-//void Declaration() :
-//{}
-//{
-//    ModuleDeclaration()
-//    | ProcDeclaration()
-//    | ClassDeclaration()
-//}
-
 void PrivacySpecifier() : {}
 {
     <PRIVATE> | <PUBLIC>
@@ -1195,21 +1082,6 @@ void ReturnIntent() :
     | <TYPE>
 }
 
-//void  TypeExpression() :
-//{}
-//{
-//LOOKAHEAD(3)StructuredType()
-//|LOOKAHEAD(3)DataparallelType()
-//|LOOKAHEAD(3)PrimitiveType()
-////| LOOKAHEAD(3)BinaryExpression()
-//| Expression()
-//|LOOKAHEAD(3)Identifier()
-//|SynchronizationType()
-//|LOOKAHEAD(3)LvalueExpression()
-//|LOOKAHEAD(3)IfExpression()
-//|LOOKAHEAD(3)UnaryExpression()
-//}
-
 void  SynchronizationType() :
 {}
 {
@@ -1224,7 +1096,6 @@ void  DataparallelType() :
  RangeType()
 |LOOKAHEAD(3)DomainType()
 |LOOKAHEAD(3)MappedDomainType()
-//|LOOKAHEAD(3)ArrayType()
 |LOOKAHEAD(3)IndexType()
 }
 
@@ -1232,13 +1103,6 @@ void  MappedDomainType() :
 {}
 {
  DomainType() <DMAPPED> DmapValue()
-}
-
-void  ArrayType() :
-{}
-{
-// "[" DomainExpression() "]" Expression()
-    "[" (ExpressionList() | DomainExpression() )  "]" [Expression()]
 }
 
 void  IndexType() :
@@ -1250,36 +1114,13 @@ void  IndexType() :
 void  RangeType() :
 {}
 {
- <RANGE> ("(" (NamedExpression() ("," NamedExpression())*) ")")?
-}
-
-void  StructuredType() :
-{}
-{
- LOOKAHEAD(3)ClassType()
-| LOOKAHEAD(3)RecordType()
-| LOOKAHEAD(3)Identifier()
-| TupleType()
-}
-
-void  RecordType() :
-{}
-{
- LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)Identifier()"(" (NamedExpression() ("," NamedExpression())*) ")"
+ <RANGE> ("(" NamedExpression() ("," NamedExpression())* ")")?
 }
 
 void  TupleType() :
 {}
 {
 "(" Expression() ("," Expression())* [","] ")"
-}
-
-void  TypeList() :
-{}
-{
- LOOKAHEAD(3)Expression()
-|LOOKAHEAD(3)Expression()"," TypeList()
 }
 
 void  PrimitiveTypeParameterPart() :
@@ -1408,14 +1249,8 @@ void ProcKind() :
 {
     <INLINE> | <EXPORT> | <EXTERN> | <OVERRIDE>
 }
-
+// todo Нужно разбирать по контексту эррэй литерал, так как он в типах и выражениях немного разный
 void Expression() :
-{}
-{
-   MbTypeExpression()
-}
-//Нужно разбирать по контексту эррэй литерал, так как он в типах и выражениях немного разный
-void MbTypeExpression() :
 {}
 {
      (LOOKAHEAD(3)TupleType()
@@ -1461,101 +1296,6 @@ void MbTypeExpression() :
     | (<SWAP> Expression() )
     | (<IO> Expression() )
     )*
-}
-
-//void TypeExpression() : {}
-//{
-//
-//}
-
-void MbTypeQueryExpression() :
-{}
-{
-TypeQueryExpression()
-|LOOKAHEAD(3)TupleExpression()
-|LetExpression()
-|IfExpression()
-|ForExpression()
-|ForallExpression()
-|LOOKAHEAD(3)EnumConstantExpression()
-|LiteralExpression()
-|LOOKAHEAD(3)Identifier()
-|LOOKAHEAD(3)NewExpression()
-|LOOKAHEAD(3)QueryExpression()
-|LOOKAHEAD(3)UnaryExpression()
-|LOOKAHEAD(3)ReduceExpression()
-|LOOKAHEAD(3)ScanExpression()
-|LOOKAHEAD(3)ModuleAccessExpression()
-|LOOKAHEAD(3)TupleExpandExpression()
-|LOOKAHEAD(3)MappedDomainExpression()
-}
-
-void MbLocaleQueryExpression() :
-{}
-{
-    LocaleQueryExpression()
-    | MbTypeQueryExpression()
-}
-
-void MbMemberAccessExpression() :
-{}
-{
-    MemberAccessExpression()
-    |MbParenthesizedExpression()
-}
-
-void MbParenthesizedExpression() :
-{}
-{
-    ParenthesizedExpression()
-    |MbLocaleQueryExpression()
-}
-
-
-
-
-
-void MbIteratableCallExpression() :
-{}
-{
-    IteratableCallExpression()
-    |MbMemberAccessExpression()
-}
-
-void MbCallExpression() :
-{}
-{
-    CallExpression()
-    |MbIteratableCallExpression()
-}
-
-void MbLvalueExpression() :
-{}
-{
-    LvalueExpression()
-    |MbCallExpression()
-}
-
-void MbCastExpression() :
-{}
-{
-    (Expression() ":" Expression())*
-    | MbBinaryExpression()
-}
-
-void MbBinaryExpression() :
-{}
-{
-    BinaryExpression()
-    |MbLvalueExpression()
-}
-
-
-
-void  TypeQueryExpression() :
-{}
-{
-    Expression()<DOT> <TYPE>
 }
 
 void  MappedDomainExpression() :
@@ -1792,12 +1532,6 @@ void  NewExpression() :
   <NEW> Expression()["(" ArgumentList() ")"]
 }
 
-void  IteratableCallExpression() :
-{}
-{
-    CallExpression()
-}
-
 void  EnumConstantExpression() :
 {}
 {
@@ -1920,7 +1654,7 @@ void  NonRangeExpression() :
  Expression()
 }
 
-//TODO
+
 TOKEN : {
 < STRING_LITERAL : ("\"" (~["\""]|("\\"~[]))* "\"")
     | ("\"\"\"" (~["\""]|("\\"~[]))* "\"\"\"")
@@ -1936,11 +1670,5 @@ void  BytesLiteral() :
 {}
 {
     <BYTES_LITERAL>
-}
-
-void  Digits() :
-{}
-{
-  <INTEGER_LITERAL>
 }
 

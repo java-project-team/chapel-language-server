@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version "6.0.0"
+}
+
+application {
+    mainClass = 'Main'
+}
+
+group 'project'
+version '1.0-SNAPSHOT'
+// Shadow task depends on Jar task, so these will be reflected for Shadow as well
+mainClassName = "Main"
+shadowJar {
+    archiveBaseName.set('server')
+    archiveClassifier.set('')
+    archiveVersion.set('')
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repo.maven.apache.org/maven2/org/eclipse/lsp4j/"
+    }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.12.0'
+}
+
+test {
+    useJUnitPlatform()
+}
