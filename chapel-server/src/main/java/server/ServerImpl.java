@@ -112,6 +112,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             LOG.info(dump(rootNode, ""));
             ChapelModule currentFile = createChapelModule(rootNode);
             LOG.info(currentFile.toString());
+
             return null;
         }
 
@@ -159,13 +160,18 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                             queue.add(subModule);
                         }
                         case "ProcedureDeclarationStatement" -> {
-                            if (!checkProcedure(currentNode)) {
+                            if (!checkIsProcedure(currentNode)) {
                                 continue;
                             }
                             idToken = getIdFromNode(statement);
                             assert idToken != null;
                             ChapelProcedure procedure = new ChapelProcedure(idToken.image);
                             currentModule.getProcedures().put(procedure.getName(), procedure);
+                        }
+                        case "VariableDeclarationStatement" -> {
+                            idToken = getIdFromNode(currentNode);
+                            assert idToken != null;
+                            currentModule.getVariables().add(idToken.image);
                         }
                         default -> {
                         }
@@ -175,7 +181,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             return fileModule;
         }
 
-        private boolean checkProcedure(SimpleNode currentNode) {
+        private boolean checkIsProcedure(SimpleNode currentNode) {
             for (Token currentToken = currentNode.jjtGetFirstToken();
                  !currentToken.equals(currentNode.jjtGetLastToken());
                  currentToken = currentToken.next) {
