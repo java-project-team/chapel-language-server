@@ -112,6 +112,10 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             LOG.info(dump(rootNode, ""));
             ChapelModule currentFile = createChapelModule(rootNode);
             LOG.info(currentFile.toString());
+            // бфсом идти по модулям
+            // В модуле:
+            //   составить иерархию импортов
+            //   обойти бфсом исполняемые стейтменты для конкретного модуля
 
             return null;
         }
