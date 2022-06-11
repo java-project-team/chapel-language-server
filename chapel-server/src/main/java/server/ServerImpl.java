@@ -3,6 +3,7 @@ package server;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.*;
 import parser.Parser;
 import parser.ParserConstants;
@@ -17,6 +18,7 @@ import java.util.logging.Logger;
 
 import parser.Token;
 import requests.FileInformation;
+import server.completion.patterns.UsualCompletion;
 import server.semantic.tokens.ChapelModule;
 import server.semantic.tokens.ChapelProcedure;
 
@@ -55,6 +57,15 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 //        for (var e : fileInformationMap.entrySet()) {
 //            LOG.info(e.getValue().getFunctions().toString());
 //        }
+
+        var completionProvider = new CompletionOptions();
+        completionProvider.setWorkDoneProgress(false);
+        completionProvider.setResolveProvider(true);
+        capabilities.setCompletionProvider(completionProvider);
+
+        var hoverProvider = new HoverOptions();
+        hoverProvider.setWorkDoneProgress(false);
+        capabilities.setHoverProvider(hoverProvider);
 
         var codeLensOptions = new CodeLensOptions();
         codeLensOptions.setWorkDoneProgress(false);
@@ -95,6 +106,26 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
     }
 
     private class ChapelTextDocumentService implements TextDocumentService {
+
+        @Override
+        public CompletableFuture<Hover> hover(HoverParams params) {
+
+        }
+
+        @Override
+        public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams position) {
+
+            List<CompletionItem> listOfItems = new ArrayList<CompletionItem>();
+            listOfItems.add(new UsualCompletion("module"));
+            listOfItems.add(new UsualCompletion("proc"));
+            listOfItems.add(new UsualCompletion("var"));
+            return CompletableFuture.completedFuture(Either.forLeft(listOfItems));
+        }
+
+        @Override
+        public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem unresolved) {
+            return CompletableFuture.completedFuture(unresolved);
+        }
 
         @Override
         public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
