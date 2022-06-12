@@ -634,15 +634,15 @@ void TypeDeclarationStatement() :
 void EnumDeclarationStatement() :
 {}
 {
-  <ENUM> <ID> "{" EnumConstantList() "}"
+  <ENUM> <ID> EnumBody()
 }
 
-void EnumConstantList() :
-{}
+void EnumBody() : {}
 {
-  LOOKAHEAD(3)EnumConstant()
-|  LOOKAHEAD(3)EnumConstant() "," [EnumConstantList()]
+    "{" EnumConstant() ("," EnumConstant())* "}"
 }
+
+
 
 void EnumConstant():
 {}
@@ -657,7 +657,12 @@ void InitPart(): {}
 
 void ClassDeclarationStatement(): {}
 {
-    <CLASS> <ID> [ClassInherit()] "{"[ ClassStatementList()]"}"
+    <CLASS> <ID> [ClassInherit()] ClassBody()
+}
+
+void ClassBody() : {}
+{
+    "{"(ClassStatement())* "}"
 }
 
 void ClassInherit() :
@@ -678,12 +683,6 @@ void  NamedExpression() :
 {
     LOOKAHEAD(3)Expression()
     |LOOKAHEAD(3)<ID> "=" Expression()
-}
-
-void ClassStatementList() :
-{}
-{
-    ClassStatement() (ClassStatement())*
 }
 
 void ClassStatement() :
@@ -713,14 +712,12 @@ void Identifier() :{} {<ID>}
 void SimpleRecordDeclarationStatement() :
 {}
 {
-    <RECORD> Identifier() "{" RecordStatementList() "}"
+    <RECORD> Identifier() RecordBody()
 }
 
-void RecordStatementList() :
-{}
+void RecordBody() :{}
 {
-    LOOKAHEAD(3)RecordStatement()
-    |LOOKAHEAD(3)RecordStatement() RecordStatementList()
+    "{" RecordStatement() ( RecordStatement() )* "}"
 }
 
 void RecordStatement() :
@@ -735,14 +732,12 @@ void RecordStatement() :
 void UnionDeclarationStatement() :
 {}
 {
-    [<EXTERN> ] <UNION> Identifier() "{" UnionStatementList()"}"
+    [<EXTERN> ] <UNION> Identifier() UnionBody()
 }
 
-void UnionStatementList() :
-{}
+void UnionBody() : {}
 {
-    LOOKAHEAD(3)UnionStatement() UnionStatementList()
-    |LOOKAHEAD(3)UnionStatement()
+    "{" UnionStatement() (UnionStatement())* "}"
 }
 
 void UnionStatement() :
@@ -768,12 +763,12 @@ void  ExternalTypeAliasDeclarationStatement() :
     <EXTERN> [Expression()] <TYPE> TypeAliasDeclaration() ("," TypeAliasDeclaration())*
 }
 
-void TypeAliasDeclarationList() :
-{}
-{
-    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
-    |LOOKAHEAD(3)TypeAliasDeclaration()
-}
+//void TypeAliasDeclarationList() :
+//{}
+//{
+//    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
+//    |LOOKAHEAD(3)TypeAliasDeclaration()
+//}
 
 void TypeAliasDeclaration() :
 {}
