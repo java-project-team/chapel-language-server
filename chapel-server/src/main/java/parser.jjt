@@ -786,7 +786,7 @@ void VariableDeclarationStatement() :
 {}
 {
     [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind()
-    VariableDeclaration() ("," VariableDeclaration())* ";"
+    VariableDeclarationList() ";" // норм же? да, вроде, норм
 }
 
 void ConfigExternOrExport():

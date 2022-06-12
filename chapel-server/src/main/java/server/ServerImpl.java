@@ -36,8 +36,9 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setCodeActionProvider(false);
         capabilities.setColorProvider(false);
-        capabilities.setDeclarationProvider(false);
+        capabilities.setDeclarationProvider(true);
         capabilities.setDefinitionProvider(true);
+        capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
         capabilities.setHoverProvider(false);
 
         capabilities.setCallHierarchyProvider(true);
@@ -104,7 +105,30 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             params.getPosition().setLine(params.getPosition().getLine() + 1);
             params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
             try {
-                var res = definitionProvider.find(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
+                var res = definitionProvider.findDefinition(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
+                if (res == null) {
+                    res = new ArrayList<>();
+                }
+                res = res.stream().peek(a -> {
+                    a.getRange().getStart().setLine(a.getRange().getStart().getLine() - 1);
+                    a.getRange().getEnd().setLine(a.getRange().getEnd().getLine() - 1);
+                    a.getRange().getStart().setCharacter(a.getRange().getStart().getCharacter() - 1);
+                    a.getRange().getEnd().setCharacter(a.getRange().getEnd().getCharacter() - 1);
+                }).toList();
+                LOG.info(res.toString());
+                return CompletableFuture.completedFuture(Either.forLeft(res));
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+
+        @Override
+        public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> declaration(DeclarationParams params) {
+            LOG.info("declaration");
+            params.getPosition().setLine(params.getPosition().getLine() + 1);
+            params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
+            try {
+                var res = definitionProvider.findDeclaration(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
                 if (res == null) {
                     res = new ArrayList<>();
                 }
