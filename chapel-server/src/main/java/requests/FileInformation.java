@@ -24,11 +24,18 @@ public class FileInformation {
     }
 
     public List<DefinitionVariable> getVariables() {
+        update();
         return variables;
     }
 
     public List<DefinitionFunction> getFunctions() {
+        update();
         return functions;
+    }
+
+    public SimpleNode getRoot() {
+        update();
+        return root;
     }
 
     public FileInformation update() {
@@ -37,11 +44,12 @@ public class FileInformation {
         }
         variables.clear();
         functions.clear();
-        isChanged = false;
+        //isChanged = false;
 
-        root = Parser.parse(path);
+        var root = Parser.parse(path);
+        this.root = root;
         if (root != null) {
-            root = (SimpleNode) root.jjtGetChild(0);
+            //root = (SimpleNode) root.jjtGetChild(0);
 
             for (int i = 0; i < root.jjtGetNumChildren(); i++) {
                 if (Objects.equals(root.jjtGetChild(i).toString(), "Statement")) {

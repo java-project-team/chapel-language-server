@@ -1,11 +1,14 @@
 package requests;
 
 import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.xtext.xbase.lib.Pair;
 import parser.Parser;
 import parser.SimpleNode;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 public class DefinitionProvider {
     private static BasicProcessing filesInformation;
@@ -14,33 +17,39 @@ public class DefinitionProvider {
         this.filesInformation = filesInformation;
     }
 
-    public List<Pair<SimpleNode, String>> find(Location location, SimpleNode root) {
-        System.out.println(location.getUri());
+    public List<Location> findDumb(Location location) {
         filesInformation.addFile(location.getUri());
+        SimpleNode root = filesInformation.getFileInformation(location.getUri()).getRoot();
+        root.dump("");
+        return null;
+    }
 
-        if (root == null) {
-            root = Parser.parse(location.getUri());
-        }
-        SimpleNode vertex = Vertex.find(location, root);
+    public List<Location> find(Logger LOG, String uri, Position position) {
+        filesInformation.addFile(uri);
+        SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
 
+        SimpleNode vertex = Vertex.find(LOG, position, root);
         if (vertex == null) {
-            return null;
+            return new ArrayList<>();
         }
 
         if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
-            return findProviderFunction(location.getUri(), vertex.jjtGetFirstToken().image);
+            LOG.info("find func def");
+            return findProviderFunction(LOG, uri, vertex.jjtGetFirstToken().image);
         }
-        else /*if ()*/ { // TODO здесь нужно проверить, не тип ли это
-            List<Pair<SimpleNode, String>> ans = new ArrayList<>();
-            var res = findProviderVariable(vertex);
+        else { // TODO здесь нужно проверить, не тип ли это
+            List<Location> ans = new ArrayList<>();
+            var res = findProviderVariable(LOG, vertex);
             if (res != null) {
-                ans.add(new Pair<>(res, location.getUri()));
+                ans.add(new Location(uri, new Range(new Position(res.jjtGetFirstToken().beginLine,
+                        res.jjtGetFirstToken().beginColumn), new Position(res.jjtGetLastToken().endLine,
+                        res.jjtGetLastToken().endColumn))));
             }
             return ans;
         }
     }
 
-    public static boolean isVarDefinition(SimpleNode vertexVariable, SimpleNode vertex) {
+    private static boolean isVarDefinition(Logger LOG, SimpleNode vertexVariable, SimpleNode vertex) {
         if (!Objects.equals(vertex.toString(), "VariableDeclarationStatement")) {
             return false;
         }
@@ -55,17 +64,20 @@ public class DefinitionProvider {
         return false;
     }
 
-    private static List<Pair<SimpleNode, String>> findProviderFunction(String file, String function) { // TODO тут по хорошему list надо бы
+    private static List<Location> findProviderFunction(Logger LOG, String file, String function) {
         List<Pair<SimpleNode, String>> ans = new ArrayList<>();
         {
             List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
+            LOG.info(functions.toString());
             for (DefinitionFunction i : functions) {
                 if (Objects.equals(i.getName(), function)) {
                     ans.add(new Pair<>(i.getNode(), file));
                 }
             }
             if (!ans.isEmpty()) {
-                return ans;
+                return ans.stream().map(res -> new Location(res.getValue(), new Range(new Position(res.getKey().jjtGetFirstToken().beginLine,
+                        res.getKey().jjtGetFirstToken().beginColumn), new Position(res.getKey().jjtGetLastToken().endLine,
+                        res.getKey().jjtGetLastToken().endColumn)))).toList();
             }
         }
 
@@ -78,28 +90,30 @@ public class DefinitionProvider {
                 }
             }
         }
-        return ans;
+        return ans.stream().map(res -> new Location(res.getValue(), new Range(new Position(res.getKey().jjtGetFirstToken().beginLine,
+                res.getKey().jjtGetFirstToken().beginColumn), new Position(res.getKey().jjtGetLastToken().endLine,
+                res.getKey().jjtGetLastToken().endColumn)))).toList();
     }
 
-    private static SimpleNode findProviderVariable(SimpleNode vertex) {
+    private static SimpleNode findProviderVariable(Logger LOG, SimpleNode vertex) {
         if (vertex == null) {
-            //System.out.println("Null in findProviderVariable");
             return null;
         }
 
         SimpleNode vertexVariable = vertex;
         while (vertex.jjtGetParent() != null) {
             vertex = (SimpleNode) vertex.jjtGetParent();
-            if (Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement")) {
+            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement") || Objects.equals(vertex.toString(), "Statement")) {
                 for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
                     for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
-                        if (isVarDefinition(vertexVariable, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {
+                        if (isVarDefinition(LOG, vertexVariable, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {
                             return (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j);
                         }
                     }
                 }
             }
         }
+
         return null; // TODO if (null) {return findProviderVariableAnotherFile()}
     }
 }

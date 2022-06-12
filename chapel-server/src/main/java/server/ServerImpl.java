@@ -3,6 +3,7 @@ package server;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.*;
 import parser.Parser;
 import parser.SimpleNode;
@@ -16,6 +17,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
+import requests.BasicProcessing;
+import requests.DefinitionProvider;
 import requests.FileInformation;
 import server.semantic.tokens.ChapelModule;
 
@@ -24,7 +27,9 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
     private LanguageClient client = null;
     private final Gson gson = new Gson();
     private List<WorkspaceFolder> folders;
-    private HashMap<String, FileInformation> fileInformationMap = new HashMap<>();
+    //private HashMap<String, FileInformation> fileInformationMap = new HashMap<>();
+    BasicProcessing basicProcessing = new BasicProcessing(new ArrayList<>());
+    private DefinitionProvider definitionProvider = new DefinitionProvider(basicProcessing);
 
     @Override
     public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
@@ -32,7 +37,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         capabilities.setCodeActionProvider(false);
         capabilities.setColorProvider(false);
         capabilities.setDeclarationProvider(false);
-        capabilities.setDefinitionProvider(false);
+        capabilities.setDefinitionProvider(true);
         capabilities.setHoverProvider(false);
 
         capabilities.setCallHierarchyProvider(true);
@@ -93,9 +98,32 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
     }
 
     private class ChapelTextDocumentService implements TextDocumentService {
+        @Override
+        public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
+            LOG.info("definition");
+            params.getPosition().setLine(params.getPosition().getLine() + 1);
+            params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
+            try {
+                var res = definitionProvider.find(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
+                if (res == null) {
+                    res = new ArrayList<>();
+                }
+                res = res.stream().peek(a -> {
+                    a.getRange().getStart().setLine(a.getRange().getStart().getLine() - 1);
+                    a.getRange().getEnd().setLine(a.getRange().getEnd().getLine() - 1);
+                    a.getRange().getStart().setCharacter(a.getRange().getStart().getCharacter() - 1);
+                    a.getRange().getEnd().setCharacter(a.getRange().getEnd().getCharacter() - 1);
+                }).toList();
+                LOG.info(res.toString());
+                return CompletableFuture.completedFuture(Either.forLeft(res));
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
 
         @Override
         public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
+            LOG.info("semanticTokensFull");
             try {
                 var doc = new File(new URI(params.getTextDocument().getUri()));
                 var rootNode = Parser.parse(doc.getAbsolutePath());
@@ -118,11 +146,12 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         @Override
         public void didOpen(DidOpenTextDocumentParams params) {
-
+            LOG.info("didOpen");
         }
 
         @Override
         public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
+            LOG.info("codeLens");
             List<CodeLens> list = new ArrayList<>(getVarTypeLensesInDocument(params.getTextDocument()));
             return CompletableFuture.completedFuture(list);
         }
