@@ -109,7 +109,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         @Override
         public CompletableFuture<Hover> hover(HoverParams params) {
-
+            return null;
         }
 
         @Override
