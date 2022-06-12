@@ -313,6 +313,7 @@ void Block()#void:
         Statement()
     } catch (ParseException e) {
         error_skipto(SEMICOLON);
+//        throw e;
     }
     )* <EOF>
 }
@@ -382,7 +383,7 @@ void SelectStatement() :
 {
     <SELECT> Expression() "{"
     (
-    (<WHEN> Expression() ("," Expression())* ((<DO> Statement()) | BlockStatement()))
+    (<WHEN> Expression() ("," Expression())* [<DO>] Statement())
     | (<OTHERWISE> (Statement() | (<DO> Statement() )))
     )*
     "}"
@@ -397,7 +398,7 @@ void WhileDoStatement() :
 {}
 {
     <WHILE>
-    (Expression() | CTRLDecl())  (<DO> Statement() | BlockStatement())
+    (Expression() | CTRLDecl())  [<DO> ]Statement()
 }
 
 void DoWhileStatement() :
@@ -410,10 +411,7 @@ void ForStatement() :
 {}
 {
     <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr()
-    (
-    (<DO> Statement())
-    | BlockStatement()
-    )
+    [<DO> ]Statement()
 }
 
 void IterableExpr() :
@@ -440,7 +438,7 @@ void ContinueStatement() :
 void ParamForStatement() :
 {}
 {
-    <FOR> <PARAM> <ID> <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] (<DO> Statement() | BlockStatement() )
+    <FOR> <PARAM> <ID> <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] [<DO> ] Statement()
 }
 void UseStatement() :
 {}
@@ -534,7 +532,7 @@ void YieldStatement() :
 void ModuleDeclarationStatement() :
 {}
 {
-    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> BlockStatement()
+    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> Statement()
 }
 
 void ProcedureDeclarationStatement() :
@@ -545,7 +543,7 @@ void ProcedureDeclarationStatement() :
     (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
     [LOOKAHEAD(3)ReturnIntent()]
     [ReturnType() ]
-    [WhereClause() ] ( BlockStatement()| ReturnStatement())
+    [WhereClause() ] Statement()
 
 }
 
@@ -575,7 +573,7 @@ void IteratorDeclarationStatement() :
 {}
 {
     [PrivacySpecifier() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
-    (YieldStatement() | BlockStatement())
+     Statement()
 }
 
 void YieldType() :
@@ -596,7 +594,7 @@ void MethodDeclarationStatement() :
 {}
 {
     [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [LOOKAHEAD(3)TypeBinding()]
-        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  (BlockStatement() | ReturnStatement() )
+        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  Statement()
 }
 
 void TypeBinding() : {}
@@ -650,7 +648,7 @@ void InitPart(): {}
 
 void ClassDeclarationStatement(): {}
 {
-    <CLASS> <ID> [ClassInherit()] BlockStatement()
+    <CLASS> <ID> [ClassInherit()] Statement()
 }
 
 void ClassInherit() :
@@ -691,13 +689,13 @@ void Identifier() :{} {<ID>}
 void SimpleRecordDeclarationStatement() :
 {}
 {
-    <RECORD> Identifier() Block()
+    <RECORD> Identifier() Statement()
 }
 
 void UnionDeclarationStatement() :
 {}
 {
-    [<EXTERN> ] <UNION> Identifier() BlockStatement()
+    [<EXTERN> ] <UNION> Identifier() Statement()
 }
 
 void TypeAliasDeclarationStatement() :
@@ -794,13 +792,13 @@ void OnStatement() :
 {}
 {
     <ON> Expression()
-    ((<DO> Statement()) | BlockStatement())
+    [<DO>] Statement()
 }
 
 void CobeginStatement() :
 {}
 {
-    <COBEGIN> [TaskIntentClause()] BlockStatement()
+    <COBEGIN> [TaskIntentClause()] Statement()
 }
 
 
@@ -871,7 +869,7 @@ void CoforallStatement() :
 {}
 {
     <COFORALL> (IndexVarDeclaration() | IteratableExpression() )
-    [<IN> IteratableExpression()] [TaskIntentClause()] ((<DO> Statement()) | BlockStatement())
+    [<IN> IteratableExpression()] [TaskIntentClause()] [<DO>] Statement()
 }
 
 void  IteratableExpression() :
@@ -906,7 +904,6 @@ void  SyncStatement() :
 {}
 {
  <SYNC> Statement()
-| BlockStatement()
 }
 
 void  SyncType() :
@@ -918,7 +915,7 @@ void  SyncType() :
 void  SerialStatement() :
 {}
 {
- <SERIAL> [LOOKAHEAD(3)Expression()] ((<DO> Statement()) | BlockStatement())
+ <SERIAL> [LOOKAHEAD(3)Expression()] [<DO>] Statement()
 }
 
 void  AtomicType() :
@@ -937,7 +934,7 @@ void  ForallStatement() :
 {}
 {
     (<FORALL> (IndexVarDeclaration() | IteratableExpression()) [<IN> IteratableExpression()] [TaskIntentClause()]
-     ((<DO> Statement()) | BlockStatement()) )
+     [<DO>] Statement() )
     | ("[" (IndexVarDeclaration() | IteratableExpression())
         [<IN> IteratableExpression()] [TaskIntentClause()] "]" Statement()
         )
@@ -952,7 +949,7 @@ void  DeleteStatement() :
 void ManageStatement() :
 {}
 {
-    <MANAGE> ManagerExpression() ("," ManagerExpression())* ((<DO> Statement()) | BlockStatement() )
+    <MANAGE> ManagerExpression() ("," ManagerExpression())* [<DO>] Statement()
 }
 
 void ManagerExpression() :
@@ -997,7 +994,7 @@ void IfStatement() :
 {}
 {
     <IF> (Expression() | CTRLDecl() )
-    ((<THEN> Statement()) | BlockStatement())
+    [<THEN>] Statement()
     [LOOKAHEAD(3)<ELSE> Statement()]
 }
 

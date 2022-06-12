@@ -5,13 +5,24 @@ import parser.ParserTreeConstants;
 import parser.SimpleNode;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.logging.Logger;
 
 public class ChapelStatement {
+    protected static void addAllStatements(Collection<SimpleNode> dest, SimpleNode root) {
+        assert root != null;
+        for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+            var child = (SimpleNode)root.jjtGetChild(i);
+            if (child.getId() != ParserTreeConstants.JJTSTATEMENT) {
+                continue;
+            }
+            dest.add(child);
+        }
+    }
     public ArrayList<SimpleNode> contentNodes = new ArrayList<>();
-    public SimpleNode rootNode;
+    public SimpleNode rootNode = null;
 
     public final HashMap<String, ChapelProcedure> procedures = new HashMap<>();
     public final ArrayList<ChapelStatement> subStatements = new ArrayList<>();
@@ -19,23 +30,20 @@ public class ChapelStatement {
 
     public final HashMap<String, ChapelModule> modules = new HashMap<>();
 
+//    protected ChapelStatement() {}
     public ChapelStatement(SimpleNode newRootNode) {
         this.rootNode = newRootNode;
-        if (newRootNode.getId() == ParserTreeConstants.JJTFILE) {
-            this.contentNodes.add(newRootNode);
-            return;
-        }
-        for (int i = 0; i < newRootNode.jjtGetNumChildren(); i++) {
-            var child = (SimpleNode)newRootNode.jjtGetChild(i);
-            var childId = child.getId();
-            if (childId == ParserTreeConstants.JJTBLOCKSTATEMENT ||
-                childId == ParserTreeConstants.JJTENUMBODY) {
-                this.contentNodes.add(child);
-            } else if (childId == ParserTreeConstants.JJTSTATEMENT &&
-                    ((SimpleNode)child.jjtGetChild(0)).getId() == ) {
-
-            }
-        }
+//        if (newRootNode.getId() == ParserTreeConstants.JJTFILE) {
+//            this.contentNodes.add(newRootNode);
+//            return;
+//        }
+//        for (int i = 0; i < newRootNode.jjtGetNumChildren(); i++) {
+//            var child = (SimpleNode)newRootNode.jjtGetChild(i);
+//            var childId = child.getId();
+//            if (childId == ParserTreeConstants.JJTSTATEMENT) {
+//                contentNodes.add(child);
+//            }
+//        }
     }
     @Override
     public String toString() {

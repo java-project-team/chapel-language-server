@@ -148,6 +148,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             }
             return ans.toString();
         }
+
         private ChapelModule createChapelModule(SimpleNode rootNode) {
             var fileModule = new ChapelModule(rootNode, "");
             var queue = new LinkedList<ChapelStatement>();
@@ -157,53 +158,53 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             while (!queue.isEmpty()) {
                 currentChapelStatement = queue.poll();
                 for (var currentContentNode : currentChapelStatement.contentNodes) {
-                    int numChildren = currentContentNode.jjtGetNumChildren();
-                    for (int i = 0; i < numChildren; i++) {
-                        var statementNode = (SimpleNode) currentContentNode.jjtGetChild(i);
-                        assert statementNode != null;
-                        if (statementNode.getId() != ParserTreeConstants.JJTSTATEMENT &&
-                                statementNode.getId() != ParserTreeConstants.JJTENUMCONSTANT) {
-                            continue;
+//                    int numChildren = currentContentNode.jjtGetNumChildren();
+//                    for (int i = 0; i < numChildren; i++) {
+                    assert currentContentNode != null;
+                    if (currentContentNode.getId() != ParserTreeConstants.JJTSTATEMENT &&
+                            currentContentNode.getId() != ParserTreeConstants.JJTENUMCONSTANT) {
+                        assert false;
+                        continue;
+                    }
+                    currentContentNode = (SimpleNode) currentContentNode.jjtGetChild(0);
+                    assert currentContentNode != null;
+                    Token idToken;
+                    switch (currentContentNode.getId()) {
+                        case ParserTreeConstants.JJTMODULEDECLARATIONSTATEMENT -> {
+                            idToken = getIdFromNode(currentContentNode);
+                            assert idToken != null;
+                            ChapelModule subModule =
+                                    new ChapelModule(
+                                            currentContentNode,
+                                            idToken.image);
+                            currentChapelStatement.modules.put(subModule.name, subModule);
+                            queue.add(subModule);
                         }
-                        statementNode = (SimpleNode) statementNode.jjtGetChild(0);
-                        assert statementNode != null;
-                        Token idToken;
-                        switch (statementNode.getId()) {
-                            case ParserTreeConstants.JJTMODULEDECLARATIONSTATEMENT -> {
-                                idToken = getIdFromNode(statementNode);
-                                assert idToken != null;
-                                ChapelModule subModule =
-                                        new ChapelModule(
-                                                statementNode,
-                                                idToken.image);
-                                currentChapelStatement.modules.put(subModule.name, subModule);
-                                queue.add(subModule);
+                        case ParserTreeConstants.JJTPROCEDUREDECLARATIONSTATEMENT -> {
+                            if (!checkIsProcedure(currentContentNode)) {
+                                continue;
                             }
-                            case ParserTreeConstants.JJTPROCEDUREDECLARATIONSTATEMENT -> {
-                                if (!checkIsProcedure(currentContentNode)) {
-                                    continue;
-                                }
-                                idToken = getIdFromNode(statementNode);
-                                assert idToken != null;
-                                ChapelProcedure procedure = new ChapelProcedure(statementNode, idToken.image);
-                                queue.add(procedure);
-                                currentChapelStatement.procedures.put(procedure.getName(), procedure);
-                            }
-                            case ParserTreeConstants.JJTVARIABLEDECLARATIONSTATEMENT -> {
-                                idToken = getIdFromNode(statementNode);
-                                assert idToken != null;
-                                currentChapelStatement.variables.add(idToken.image);
-                            }
-                            case ParserTreeConstants.JJTCLASSDECLARATIONSTATEMENT -> {
-                            }
-                            default -> {
-                                ChapelStatement chapelStatement = new ChapelStatement(statementNode);
-                                currentChapelStatement.subStatements.add(chapelStatement);
-                                queue.add(chapelStatement);
-                            }
+                            idToken = getIdFromNode(currentContentNode);
+                            assert idToken != null;
+                            ChapelProcedure procedure = new ChapelProcedure(currentContentNode, idToken.image);
+                            queue.add(procedure);
+                            currentChapelStatement.procedures.put(procedure.getName(), procedure);
+                        }
+                        case ParserTreeConstants.JJTVARIABLEDECLARATIONSTATEMENT -> {
+                            idToken = getIdFromNode(currentContentNode);
+                            assert idToken != null;
+                            currentChapelStatement.variables.add(idToken.image);
+                        }
+                        case ParserTreeConstants.JJTCLASSDECLARATIONSTATEMENT -> {
+                        }
+                        default -> {
+                            ChapelStatement chapelStatement = new ChapelStatement(currentContentNo);
+                            currentChapelStatement.subStatements.add(chapelStatement);
+                            queue.add(chapelStatement);
                         }
                     }
                 }
+//                }
             }
             return fileModule;
         }
@@ -263,7 +264,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                 switch (child.toString()) {
                     case "ExpressionStatement":
                         break;
-                        // var x = 10;
+                    // var x = 10;
                     case "VariableDeclarationStatement":
                         for (int j = 0; j < child.jjtGetNumChildren(); j++) {
                             var notTerm = (SimpleNode) child.jjtGetChild(j);
