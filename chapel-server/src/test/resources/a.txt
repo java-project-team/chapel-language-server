@@ -1,3 +1,7 @@
+class D {
+
+}
+
 module OurModule {
 
 // We can use modules inside of other modules.

@@ -11,13 +11,5 @@ public class ChapelModule extends ChapelNamedStatement {
         super(contentNode, name);
     }
 
-    @Override
-    public String toString() {
-        return String.join(
-                "\n",
-                contentNode.toString(),
-                modules.toString(),
-                procedures.toString(),
-                variables.toString());
-    }
+
 }

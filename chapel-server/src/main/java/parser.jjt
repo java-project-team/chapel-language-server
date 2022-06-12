@@ -326,7 +326,6 @@ void  ExpressionStatement() :
 void Statement() :
 {}
 {
-//    try {
     LOOKAHEAD(3)BlockStatement()
     | LOOKAHEAD(3)IfStatement()
     |  LOOKAHEAD(3)ForStatement()
@@ -546,14 +545,8 @@ void ProcedureDeclarationStatement() :
     (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
     [LOOKAHEAD(3)ReturnIntent()]
     [ReturnType() ]
-    [WhereClause() ] FunctionBody()
+    [WhereClause() ] ( BlockStatement()| ReturnStatement())
 
-}
-
-void FunctionBody():
-{}
-{
-    BlockStatement() | ReturnStatement()
 }
 
 void WhereClause() : {}
@@ -603,7 +596,7 @@ void MethodDeclarationStatement() :
 {}
 {
     [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [LOOKAHEAD(3)TypeBinding()]
-        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  FunctionBody()
+        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  (BlockStatement() | ReturnStatement() )
 }
 
 void TypeBinding() : {}
@@ -657,12 +650,7 @@ void InitPart(): {}
 
 void ClassDeclarationStatement(): {}
 {
-    <CLASS> <ID> [ClassInherit()] ClassBody()
-}
-
-void ClassBody() : {}
-{
-    "{"(ClassStatement())* "}"
+    <CLASS> <ID> [ClassInherit()] BlockStatement()
 }
 
 void ClassInherit() :
@@ -685,15 +673,6 @@ void  NamedExpression() :
     |LOOKAHEAD(3)<ID> "=" Expression()
 }
 
-void ClassStatement() :
-{}
-{
-    LOOKAHEAD(3)VariableDeclarationStatement()
-    |LOOKAHEAD(3)MethodDeclarationStatement()
-    |TypeDeclarationStatement()
-    |EmptyStatement()
-}
-
 void RecordDeclarationStatement() :
 {}
 {
@@ -712,42 +691,13 @@ void Identifier() :{} {<ID>}
 void SimpleRecordDeclarationStatement() :
 {}
 {
-    <RECORD> Identifier() RecordBody()
-}
-
-void RecordBody() :{}
-{
-    "{" RecordStatement() ( RecordStatement() )* "}"
-}
-
-void RecordStatement() :
-{}
-{
-    LOOKAHEAD(3)VariableDeclarationStatement()
-    |LOOKAHEAD(3)MethodDeclarationStatement()
-    |TypeDeclarationStatement()
-    |EmptyStatement()
+    <RECORD> Identifier() Block()
 }
 
 void UnionDeclarationStatement() :
 {}
 {
-    [<EXTERN> ] <UNION> Identifier() UnionBody()
-}
-
-void UnionBody() : {}
-{
-    "{" UnionStatement() (UnionStatement())* "}"
-}
-
-void UnionStatement() :
-{}
-{
-    LOOKAHEAD(3)TypeDeclarationStatement()
-    |LOOKAHEAD(3)ProcedureDeclarationStatement()
-    |LOOKAHEAD(3)IteratorDeclarationStatement()
-    |VariableDeclarationStatement()
-    |EmptyStatement()
+    [<EXTERN> ] <UNION> Identifier() BlockStatement()
 }
 
 void TypeAliasDeclarationStatement() :
@@ -762,13 +712,6 @@ void  ExternalTypeAliasDeclarationStatement() :
 {
     <EXTERN> [Expression()] <TYPE> TypeAliasDeclaration() ("," TypeAliasDeclaration())*
 }
-
-//void TypeAliasDeclarationList() :
-//{}
-//{
-//    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
-//    |LOOKAHEAD(3)TypeAliasDeclaration()
-//}
 
 void TypeAliasDeclaration() :
 {}
@@ -850,8 +793,8 @@ void RemoteVariableDeclarationStatement() :
 void OnStatement() :
 {}
 {
-    LOOKAHEAD(3)<ON> Expression() <DO> Statement()
-    |LOOKAHEAD(3)<ON> Expression() BlockStatement()
+    <ON> Expression()
+    ((<DO> Statement()) | BlockStatement())
 }
 
 void CobeginStatement() :
@@ -962,8 +905,8 @@ void  BeginStatement() :
 void  SyncStatement() :
 {}
 {
- LOOKAHEAD(3)<SYNC> Statement()
-|LOOKAHEAD(3)<SYNC> BlockStatement()
+ <SYNC> Statement()
+| BlockStatement()
 }
 
 void  SyncType() :
@@ -975,8 +918,7 @@ void  SyncType() :
 void  SerialStatement() :
 {}
 {
- LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] <DO> Statement()
-|LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] BlockStatement()
+ <SERIAL> [LOOKAHEAD(3)Expression()] ((<DO> Statement()) | BlockStatement())
 }
 
 void  AtomicType() :
@@ -1010,16 +952,13 @@ void  DeleteStatement() :
 void ManageStatement() :
 {}
 {
-    LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* <DO> Statement()
-    |LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* BlockStatement()
+    <MANAGE> ManagerExpression() ("," ManagerExpression())* ((<DO> Statement()) | BlockStatement() )
 }
 
 void ManagerExpression() :
 {}
 {
-LOOKAHEAD(3)Expression() <AS> VariableKind() Identifier()
-|LOOKAHEAD(3)Expression() <AS> Identifier()
-|LOOKAHEAD(3)Expression()
+    Expression() [<AS> [VariableKind()] Identifier()]
 }
 
 void  ParenthesizedExpression() :
@@ -1058,7 +997,7 @@ void IfStatement() :
 {}
 {
     <IF> (Expression() | CTRLDecl() )
-    (<THEN> Statement() | BlockStatement())
+    ((<THEN> Statement()) | BlockStatement())
     [LOOKAHEAD(3)<ELSE> Statement()]
 }
 

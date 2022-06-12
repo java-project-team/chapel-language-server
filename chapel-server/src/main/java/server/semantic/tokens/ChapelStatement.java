@@ -7,10 +7,10 @@ import parser.SimpleNode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.logging.Logger;
 
 public class ChapelStatement {
-    public boolean hasBlock = false;
-    public SimpleNode contentNode;
+    public ArrayList<SimpleNode> contentNodes = new ArrayList<>();
     public SimpleNode rootNode;
 
     public final HashMap<String, ChapelProcedure> procedures = new HashMap<>();
@@ -21,19 +21,30 @@ public class ChapelStatement {
 
     public ChapelStatement(SimpleNode newRootNode) {
         this.rootNode = newRootNode;
-        for (int i = newRootNode.jjtGetNumChildren() - 1; i >= 0 ; i--) {
+        if (newRootNode.getId() == ParserTreeConstants.JJTFILE) {
+            this.contentNodes.add(newRootNode);
+            return;
+        }
+        for (int i = 0; i < newRootNode.jjtGetNumChildren(); i++) {
             var child = (SimpleNode)newRootNode.jjtGetChild(i);
-            var nodeId = child.getId();
-            if (nodeId == ParserTreeConstants.JJTBLOCKSTATEMENT ||
-                nodeId == ParserTreeConstants.JJTFUNCTIONBODY ||
-                nodeId == ParserTreeConstants.JJTCLASSBODY ||
-                nodeId == ParserTreeConstants.JJTENUMBODY ||
-                nodeId == ParserTreeConstants.JJTRECORDBODY ||
-                nodeId == ParserTreeConstants.JJTUNIONBODY) {
-                this.hasBlock = true;
-                this.contentNode = child;
-                break;
+            var childId = child.getId();
+            if (childId == ParserTreeConstants.JJTBLOCKSTATEMENT ||
+                childId == ParserTreeConstants.JJTENUMBODY) {
+                this.contentNodes.add(child);
+            } else if (childId == ParserTreeConstants.JJTSTATEMENT &&
+                    ((SimpleNode)child.jjtGetChild(0)).getId() == ) {
+
             }
         }
+    }
+    @Override
+    public String toString() {
+        return "\n{\n" + String.join(
+                ", ",
+                rootNode == null ? "null" : rootNode.toString(),
+                "Modules = " + modules,
+                "Procedures = " + procedures,
+                "Variables = " + variables,
+                "SubStatements = " + subStatements) + "\n}\n" ;
     }
 }
