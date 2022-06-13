@@ -15,9 +15,9 @@ public class Vertex {
 
         if (root.jjtGetNumChildren() == 0) {
             if (root.jjtGetFirstToken().beginLine <= position.getLine() &&
-                root.jjtGetFirstToken().endLine >= position.getLine() &&
+                root.jjtGetLastToken().endLine >= position.getLine() &&
                 root.jjtGetFirstToken().beginColumn <= position.getCharacter() &&
-                root.jjtGetFirstToken().endColumn >= position.getCharacter()) {
+                root.jjtGetLastToken().endColumn + 1 >= position.getCharacter()) {
                 return root;
             }
         }

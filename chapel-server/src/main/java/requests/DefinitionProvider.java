@@ -24,49 +24,66 @@ public class DefinitionProvider {
         return null;
     }
 
-    public List<Pair<String, SimpleNode>> findDeclarationNode(Logger LOG, String uri, Position position) {
+    private class ReturnFindDeclarationNode {
+        public static class Const {
+            final static int FUNCTION_DECLARATION = 1;
+            final static int NOTHING_DECLARATION = 2;
+            final static int VARIABLE_DECLARATION = 3;
+            final static int TYPE_DECLARATION = 4;
+        }
+
+        public int type;
+        public List<Pair<String, SimpleNode>> listDeclaration;
+        public String name;
+
+        ReturnFindDeclarationNode(int type, List<Pair<String, SimpleNode>> listDeclaration, String name) {
+            this.type = type;
+            this.listDeclaration = listDeclaration;
+            this.name = name;
+        }
+    }
+
+    public ReturnFindDeclarationNode findDeclarationNode(Logger LOG, String uri, Position position) {
         filesInformation.addFile(uri);
         SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
         LOG.info(root.toString());
 
         SimpleNode vertex = Vertex.find(LOG, position, root);
         if (vertex == null) {
-            return new ArrayList<>();
+            return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.NOTHING_DECLARATION, new ArrayList<>(), "");
         }
 
         if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
-            LOG.info("find func def");
-            return findDeclarationFunctionNode(LOG, uri, vertex.jjtGetFirstToken().image);
-        }
-        else { // TODO здесь нужно проверить, не тип ли это, или еще круче, найти определение типа!!!   !_! -_- -_- -_- -_- ~_~ ????????::::::!!!!!!!!????????????;;;; ((
+            return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION, findDeclarationFunctionNode(LOG, uri, vertex.jjtGetFirstToken().image), vertex.jjtGetFirstToken().image);
+        } else { // TODO здесь нужно проверить, не тип ли это, или еще круче, найти определение типа!!!   !_! -_- -_- -_- -_- ~_~ ????????::::::!!!!!!!!????????????;;;; ((
             List<Pair<String, SimpleNode>> ans = new ArrayList<>();
             var res = findDeclarationVariableNode(LOG, vertex);
             if (res != null) {
                 ans.add(new Pair<>(uri, res));
             }
-            return ans;
+            return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.VARIABLE_DECLARATION, ans, vertex.jjtGetFirstToken().image);
         }
     }
 
     public List<Location> findDefinition(Logger LOG, String uri, Position position) {
         var ans = findDeclarationNode(LOG, uri, position);
-        if (ans.isEmpty()) {
+        if (ans.listDeclaration.isEmpty()) {
             return new ArrayList<>();
         }
-        if (Objects.equals(ans.get(0).getValue().toString(), "ProcedureDeclarationStatement")){
-            return ans.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+        if (ans.type == ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION) {
+            return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
                     res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
                     res.getValue().jjtGetLastToken().endColumn)))).toList();
         }
 
-        var vertex = ans.get(0).getValue();
-        if (Objects.equals(ans.get(0).getValue().toString(), "VariableDeclarationStatement")) {
+        var vertex = ans.listDeclaration.get(0).getValue();
+        if (ans.type == ReturnFindDeclarationNode.Const.VARIABLE_DECLARATION) {
             for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
-                if(Objects.equals(vertex.jjtGetChild(i).toString(), "VariableDeclarationList")) {
+                if (Objects.equals(vertex.jjtGetChild(i).toString(), "VariableDeclarationList")) {
                     for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
                         for (int k = 0; k < vertex.jjtGetChild(i).jjtGetChild(j).jjtGetNumChildren(); k++) {
                             if (Objects.equals(vertex.jjtGetChild(i).jjtGetChild(j).jjtGetChild(k).toString(), "InitializationPart")) {
-                                return ans.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+                                return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
                                         res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
                                         res.getValue().jjtGetLastToken().endColumn)))).toList();
                             }
@@ -76,46 +93,58 @@ public class DefinitionProvider {
             }
         }
 
-        SimpleNode vertexDeclaration = vertex;
-        vertex = (SimpleNode) vertex.jjtGetParent().jjtGetParent();
-        for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
-            if (Objects.equals(vertex.jjtGetChild(i).toString(), "Statement") // да не знаю, сделай dfs какой-нибудь, а я спать
-                    && Objects.equals(((SimpleNode) vertex.jjtGetChild(i)).jjtGetFirstToken().image, vertex.jjtGetFirstToken().image)) {
+        var res = dfs((SimpleNode) vertex.jjtGetParent().jjtGetParent(), vertex, ans.name);
+        if (res == null) {
+            return new ArrayList<>();
+        }
+        return List.of(new Location(uri, new Range(new Position(res.jjtGetFirstToken().beginLine,
+                res.jjtGetFirstToken().beginColumn), new Position(res.jjtGetLastToken().endLine,
+                res.jjtGetLastToken().endColumn))));
+    }
+
+    private SimpleNode dfs(SimpleNode root, SimpleNode vertexDeclaration, String name) {
+        for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+            if (i + 1 < root.jjtGetNumChildren()
+                    && Objects.equals(root.jjtGetChild(i).toString(), "Identifier")
+                    && Objects.equals(((SimpleNode) root.jjtGetChild(i)).jjtGetFirstToken().image, name)
+                    && Objects.equals(root.jjtGetChild(i + 1).toString(), "AssignOperators")
+                    && Objects.equals(findDeclarationVariableNode(null, (SimpleNode) root.jjtGetChild(i)), vertexDeclaration)) {
+                return (SimpleNode) root.jjtGetParent();
+            }
+            var res = dfs((SimpleNode) root.jjtGetChild(i), vertexDeclaration, name);
+            if (res != null) {
+                return res;
             }
         }
-
-        /*while (vertex.jjtGetParent() != null) {
-            vertex = (SimpleNode) vertex.jjtGetParent();
-            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement") || Objects.equals(vertex.toString(), "Statement")) {
-                for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
-                    for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
-                        if (isVarDefinition(LOG, vertexDeclaration, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {
-                            return (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j);
-                        }
-                    }
-                }
-            }
-        }*/
         return null;
     }
 
     public List<Location> findDeclaration(Logger LOG, String uri, Position position) {
         var ans = findDeclarationNode(LOG, uri, position);
-        return ans.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+        return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
                 res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
                 res.getValue().jjtGetLastToken().endColumn)))).toList();
     }
 
-    private static boolean isVarDefinition(Logger LOG, SimpleNode vertexVariable, SimpleNode vertex) {
+    private static boolean isVarDeclaration(Logger LOG, SimpleNode vertexVariable, SimpleNode vertex) {
         if (!Objects.equals(vertex.toString(), "VariableDeclarationStatement")) {
             return false;
         }
 
         for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
-            if (Vertex.isStartsEarlier((SimpleNode) vertex.jjtGetChild(i), vertexVariable) &&
-                    Objects.equals(vertex.jjtGetChild(i).toString(), "VariableDeclaration") &&
-                    Objects.equals(((SimpleNode) vertex.jjtGetChild(i)).jjtGetFirstToken().image, vertexVariable.jjtGetFirstToken().image)) {
-                return true;
+            if (Objects.equals(vertex.jjtGetChild(i).toString(), "VariableDeclarationList")) {
+                for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
+                    if (Objects.equals(vertex.jjtGetChild(i).jjtGetChild(j).toString(), "VariableDeclaration") &&
+                            Vertex.isStartsEarlier((SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j), vertexVariable)) {
+                        if (Objects.equals(vertex.jjtGetChild(i).jjtGetChild(j).jjtGetChild(0).toString(), "IdentifierList")) {
+                            for (int k = 0; k < vertex.jjtGetChild(i).jjtGetChild(j).jjtGetChild(0).jjtGetNumChildren(); k++) {
+                                if (Objects.equals(((SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j).jjtGetChild(0).jjtGetChild(k)).jjtGetFirstToken().image, vertexVariable.jjtGetFirstToken().image)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         return false;
@@ -156,10 +185,10 @@ public class DefinitionProvider {
         SimpleNode vertexVariable = vertex;
         while (vertex.jjtGetParent() != null) {
             vertex = (SimpleNode) vertex.jjtGetParent();
-            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement") || Objects.equals(vertex.toString(), "Statement")) {
+            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement")) {
                 for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
                     for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
-                        if (isVarDefinition(LOG, vertexVariable, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {
+                        if (isVarDeclaration(LOG, vertexVariable, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {
                             return (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j);
                         }
                     }

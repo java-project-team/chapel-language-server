@@ -99,6 +99,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
     }
 
     private class ChapelTextDocumentService implements TextDocumentService {
+        // TODO чего-то он и на ctrl её вызывает, и на F12, глянь чего, как
         @Override
         public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
             LOG.info("definition");

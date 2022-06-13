@@ -24,17 +24,14 @@ public class FileInformation {
     }
 
     public List<DefinitionVariable> getVariables() {
-        update();
         return variables;
     }
 
     public List<DefinitionFunction> getFunctions() {
-        update();
         return functions;
     }
 
     public SimpleNode getRoot() {
-        update();
         return root;
     }
 
@@ -44,13 +41,11 @@ public class FileInformation {
         }
         variables.clear();
         functions.clear();
-        //isChanged = false;
+        //isChanged = false; // TODO как-то обновлять надо
 
         var root = Parser.parse(path);
         this.root = root;
         if (root != null) {
-            //root = (SimpleNode) root.jjtGetChild(0);
-
             for (int i = 0; i < root.jjtGetNumChildren(); i++) {
                 if (Objects.equals(root.jjtGetChild(i).toString(), "Statement")) {
                     if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "VariableDeclarationStatement")) {
@@ -60,7 +55,7 @@ public class FileInformation {
                                 variables.add(new DefinitionVariable((SimpleNode) statement.jjtGetChild(j)));
                             }
                         }
-                    } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "ProcedureDeclarationStatement")) {
+                    } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "ProcedureDeclarationStatement") || Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "MethodDeclarationStatement")) {
                         functions.add(new DefinitionFunction((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
                     }
                 }
