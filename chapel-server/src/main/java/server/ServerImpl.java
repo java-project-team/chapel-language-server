@@ -17,6 +17,7 @@ import requests.FileInformation;
 import server.semantic.tokens.ChapelModule;
 import server.semantic.tokens.ChapelProcedure;
 import server.semantic.tokens.ChapelStatement;
+import server.semantic.tokens.ChapelUnnamedStatement;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -108,13 +109,28 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
             LOG.info(dump(rootNode, ""));
-            ChapelModule currentFile = createChapelModule(rootNode);
-            var ans = getTokensFromChapelStatement(currentFile);
-            LOG.info(currentFile.toString());
+            ChapelModule fileModule = createChapelModule(rootNode);
+//            var ans = getTokensFromChapelStatement(fileModule);
+            LOG.info(fileModule.toString());
+            class SemanticTokenFinder {
+                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
+                SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
+                    for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
+                        if (subStatement.rootNode.getId() != ParserTreeConstants.JJTUSESTATEMENT) {
+                            continue;
+                        }
 
+                    }
+                    return null;
+                }
+
+                void resolveUseDependencies() {
+
+                }
+             }
 
 //            var queue = new LinkedList<ChapelModule>();
-//            queue.add(currentFile);
+//            queue.add(fileModule);
 //            while (!queue.isEmpty()) {
 //                var currentModule = queue.pollFirst();
 //                queue.addAll(currentModule.modules.values());
@@ -132,9 +148,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         }
 
         private SemanticTokens getTokensFromChapelStatement(ChapelStatement currentModule) {
-//            if (currentModule.contentNode == null) {
-//
-//            }
+
             return null;
         }
 
@@ -154,12 +168,11 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             var queue = new LinkedList<ChapelStatement>();
             queue.add(fileModule);
             ChapelStatement currentChapelStatement;
-//            SimpleNode currentContentNode;
             while (!queue.isEmpty()) {
                 currentChapelStatement = queue.poll();
+//                LOG.info(currentChapelStatement.rootNode.toString());
+//                LOG.info(currentChapelStatement.contentNodes.toString());
                 for (var currentContentNode : currentChapelStatement.contentNodes) {
-//                    int numChildren = currentContentNode.jjtGetNumChildren();
-//                    for (int i = 0; i < numChildren; i++) {
                     assert currentContentNode != null;
                     if (currentContentNode.getId() != ParserTreeConstants.JJTSTATEMENT &&
                             currentContentNode.getId() != ParserTreeConstants.JJTENUMCONSTANT) {
@@ -177,6 +190,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                                     new ChapelModule(
                                             currentContentNode,
                                             idToken.image);
+                            subModule.parentStatement = currentChapelStatement;
                             currentChapelStatement.modules.put(subModule.name, subModule);
                             queue.add(subModule);
                         }
@@ -188,7 +202,13 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                             assert idToken != null;
                             ChapelProcedure procedure = new ChapelProcedure(currentContentNode, idToken.image);
                             queue.add(procedure);
+                            procedure.parentStatement = currentChapelStatement.parentStatement;
                             currentChapelStatement.procedures.put(procedure.getName(), procedure);
+                        }
+                        case ParserTreeConstants.JJTUSESTATEMENT -> {
+                        }
+                        case ParserTreeConstants.JJTIMPORTSTATEMENT -> {
+
                         }
                         case ParserTreeConstants.JJTVARIABLEDECLARATIONSTATEMENT -> {
                             idToken = getIdFromNode(currentContentNode);
@@ -198,13 +218,13 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                         case ParserTreeConstants.JJTCLASSDECLARATIONSTATEMENT -> {
                         }
                         default -> {
-                            ChapelStatement chapelStatement = new ChapelStatement(currentContentNo);
+                            ChapelStatement chapelStatement = new ChapelUnnamedStatement(currentContentNode);
+                            chapelStatement.parentStatement = currentChapelStatement.parentStatement;
                             currentChapelStatement.subStatements.add(chapelStatement);
                             queue.add(chapelStatement);
                         }
                     }
                 }
-//                }
             }
             return fileModule;
         }

@@ -11,6 +11,10 @@ import java.util.HashSet;
 import java.util.logging.Logger;
 
 public class ChapelStatement {
+    public boolean equals(ChapelStatement obj) {
+        return this.rootNode.equals(obj.rootNode);
+    }
+
     protected static void addAllStatements(Collection<SimpleNode> dest, SimpleNode root) {
         assert root != null;
         for (int i = 0; i < root.jjtGetNumChildren(); i++) {
@@ -22,7 +26,8 @@ public class ChapelStatement {
         }
     }
     public ArrayList<SimpleNode> contentNodes = new ArrayList<>();
-    public SimpleNode rootNode = null;
+    public SimpleNode rootNode;
+    public ChapelStatement parentStatement = null;
 
     public final HashMap<String, ChapelProcedure> procedures = new HashMap<>();
     public final ArrayList<ChapelStatement> subStatements = new ArrayList<>();
@@ -31,7 +36,7 @@ public class ChapelStatement {
     public final HashMap<String, ChapelModule> modules = new HashMap<>();
 
 //    protected ChapelStatement() {}
-    public ChapelStatement(SimpleNode newRootNode) {
+    protected ChapelStatement(SimpleNode newRootNode) {
         this.rootNode = newRootNode;
 //        if (newRootNode.getId() == ParserTreeConstants.JJTFILE) {
 //            this.contentNodes.add(newRootNode);
