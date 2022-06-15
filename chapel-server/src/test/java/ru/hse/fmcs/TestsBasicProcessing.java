@@ -15,16 +15,19 @@ public class TestsBasicProcessing {
     @Test
     public void rat() throws FileNotFoundException, ParseException {
 //        var x = Parser.parse("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java");
-//        assert x != null;
-//        x.dump("");
-        var x = new Parser(new FileInputStream("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java"));
+        var x = Parser.parse("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/a.txt");
 
-        try {
-            var n = x.File();
-            n.dump("");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        assert x != null;
+        x.dump("");
+
+//        var x = new Parser(new FileInputStream("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java"));
+//
+//        try {
+//            var n = x.File();
+//            n.dump("");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Test

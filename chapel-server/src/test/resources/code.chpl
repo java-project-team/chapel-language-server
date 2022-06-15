@@ -854,7 +854,7 @@ module OurModule {
     }
   }
 } // end OurModule
-
+module11{}
 // Using OurModule also uses all the modules it uses.
 // Since OurModule uses Time, we also use Time.
 use OurModule;

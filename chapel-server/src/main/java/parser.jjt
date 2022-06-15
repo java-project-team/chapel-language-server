@@ -282,7 +282,11 @@ TOKEN :
 SimpleNode File() :
 {}
 {
-    Block()
+//    try {
+        Block()
+//    } catch(Exception e) {
+//        error_skipto(SEMICOLON);
+//    }
     {return jjtThis;}
 }
 
@@ -309,16 +313,32 @@ void RangeLiteral() :
 void Block()#void:
 {}
 {
-    (
+//    try
+//    {
+
 //    try {
-        Statement()
-//    } catch (ParseException e) {
+     S()
+//    } catch (Exception e) {
+//        System.out.println("fuck");
 //        error_skipto(SEMICOLON);
 //        throw e;
 //    }
-    )* <EOF>
-}
+    <EOF>
+//    } catch (Exception e) {
+//        e.printStackTrace();
+//        System.out.println(e.getStackTrace());
+//    }
 
+}
+void S()#void : {} {
+    try {
+        (Statement())*
+    } catch (Exception e) {
+        System.out.println("fuck");
+        error_skipto(SEMICOLON);
+        throw e;
+    }
+}
 void  ExpressionStatement() :
 {}
 {
@@ -328,6 +348,8 @@ void  ExpressionStatement() :
 void Statement() :
 {}
 {
+    try {
+    (
     LOOKAHEAD(3)BlockStatement()
     | LOOKAHEAD(3)IfStatement()
     |  LOOKAHEAD(3)ForStatement()
@@ -363,6 +385,12 @@ void Statement() :
     |  LOOKAHEAD(3)DeleteStatement()
     |  LOOKAHEAD(3)ManageStatement()
     | LOOKAHEAD(3)ExpressionStatement()
+    )
+   } catch (ParseException e) {
+        System.out.println(e.getMessage());
+        error_skipto(SEMICOLON);
+    //        throw e;
+   }
 }
 
 JAVACODE
@@ -376,7 +404,7 @@ void error_skipto(int kind) {
   do {
     t = getNextToken();
   }
-  while (t.kind != kind && t.kind != NEWLINE && t.kind != EOF);
+  while (t.kind != kind && t.kind != EOF);
 }
 
 void SelectStatement() :

@@ -1,32 +1,8 @@
-class D {
+module A {
 
 }
 
-module OurModule {
+public A;
 
-// We can use modules inside of other modules.
-// Time is one of the standard modules.
-  use Time;
+public v;
 
-// We'll use this procedure in the parallelism section.
-  proc countdown(seconds: int) {
-    for i in 1..seconds by -1 {
-      writeln(i);
-      sleep(1);
-    }
-  }
-
-// It is possible to create arbitrarily deep module nests.
-// i.e. submodules of OurModule
-  module ChildModule {
-    proc foo() {
-      writeln("ChildModule.foo()");
-    }
-  }
-
-  module SiblingModule {
-    proc foo() {
-      writeln("SiblingModule.foo()");
-    }
-  }
-} // end OurModule

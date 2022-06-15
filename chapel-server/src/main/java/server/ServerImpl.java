@@ -101,6 +101,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             try {
                 var doc = new File(new URI(params.getTextDocument().getUri()));
                 var rootNode = Parser.parse(doc.getAbsolutePath());
+                assert rootNode != null;
                 SemanticTokens ans = findSemanticTokens(rootNode);
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
@@ -110,29 +111,61 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         void importHierarchy(ChapelModule rootModule) {
             class DFSNode {
-                int successEdges = 0;
-                public final ChapelModule module;
-                public ArrayList<DFSNode> to = new ArrayList<>();
-                public ArrayList<DFSNode> from = new ArrayList<>();
+                static class Edge {
+                    DFSNode dest;
+                    boolean isPublic;
 
+                    public Edge(DFSNode dest, boolean isPublic) {
+                        this.dest = dest;
+                        this.isPublic = isPublic;
+                    }
+                }
+                int successEdges = 0;
+                int index = 0;
+                public final ChapelModule module;
+                public ArrayList<Edge> to = new ArrayList<>();
+                public ArrayList<Edge> from = new ArrayList<>();
+                static final ArrayList<DFSNode> allDFSNodes = new ArrayList<>();
                 DFSNode(ChapelModule module) {
                     this.module = module;
+                    index = allDFSNodes.size();
+                    allDFSNodes.add(this);
                 }
 
+                static void topSort(ArrayList<Boolean> visited, LinkedList<DFSNode> order, DFSNode v) {
+                    if (visited.get(v.index)) {
+                        return;
+                    }
+                    visited.set(v.index, true);
+                    for (var to : v.to) {
+                        if (!to.isPublic) {
+                            continue;
+                        }
+                        topSort(visited, order, to.dest);
+                    }
+                    order.addFirst(v);
+                }
             }
+            DFSNode.allDFSNodes.clear();
 
             LinkedList<ChapelModule> queue = new LinkedList<>();
             HashMap<ChapelModule, DFSNode> mapFromModuleToNode = new HashMap<>();
             queue.add(rootModule);
             while (!queue.isEmpty()) {
                 var module = queue.pollFirst();
-                var node = new DFSNode(rootModule);
-                mapFromModuleToNode.put(rootModule, node);
-                queue.addAll(rootModule.subModules.values());
+                var node = new DFSNode(module);
+                mapFromModuleToNode.put(module, node);
+                queue.addAll(module.subModules.values());
             }
 
-            for (var dfsNode : mapFromModuleToNode.values()) {
-                for (var useStatement : dfsNode.module.useStatements) {
+            for (var dfsNode : DFSNode.allDFSNodes) {
+                if (dfsNode.module.useStatements.isEmpty()) {
+                    continue;
+                }
+                for (
+                        var useStatement = dfsNode.module.useStatements.get(dfsNode.successEdges);
+                        dfsNode.successEdges < dfsNode.module.useStatements.size();
+                        dfsNode.successEdges++) {
                     ArrayList<ChapelModule> modulesToUseList =
                             findModuleByUsePath(useStatement, dfsNode.module, rootModule);
                     if (modulesToUseList == null) {
@@ -141,17 +174,29 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                     dfsNode.successEdges++;
                     for (var moduleToUse : modulesToUseList) {
                         var fromNode = mapFromModuleToNode.get(moduleToUse);
+                        if (useStatement.isPublic) {
+                            dfsNode.module.usedModules.putAll(fromNode.module.subModules);
+                        }
                         assert fromNode != null;
-                        dfsNode.from.add(fromNode);
-                        fromNode.to.add(dfsNode);
+                        DFSNode.Edge from = new DFSNode.Edge(fromNode, useStatement.isPublic);
+                        DFSNode.Edge to = new DFSNode.Edge(dfsNode, useStatement.isPublic);
+                        dfsNode.from.add(from);
+                        fromNode.to.add(to);
                     }
                 }
             }
-
-            Consumer<DFSNode> topSort = (v) -> {
-
-            };
-
+//            LOG.info(String.valueOf(DFSNode.allDFSNodes.size()));
+            ArrayList<Boolean> isVisited = new ArrayList<>();
+            for (int i = 0; i < DFSNode.allDFSNodes.size(); i++) {
+                isVisited.add(false);
+            }
+            LinkedList<DFSNode> topSortOrder = new LinkedList<>();
+            for (var dfsNode : DFSNode.allDFSNodes) {
+                DFSNode.topSort(isVisited, topSortOrder, dfsNode);
+            }
+            for (var x : topSortOrder) {
+                LOG.info(x.module.name);
+            }
         }
 
         private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
@@ -200,22 +245,23 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
 //            var ans = getTokensFromChapelStatement(fileModule);
             LOG.info(fileModule.toString());
-            class SemanticTokenFinder {
-                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
-                SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
-                    for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
-                        if (subStatement.rootNode.getId() != JJTUSESTATEMENT) {
-                            continue;
-                        }
-
-                    }
-                    return null;
-                }
-
-                void resolveUseDependencies() {
-
-                }
-             }
+            importHierarchy(fileModule);
+//            class SemanticTokenFinder {
+//                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
+//                SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
+//                    for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
+//                        if (subStatement.rootNode.getId() != JJTUSESTATEMENT) {
+//                            continue;
+//                        }
+//
+//                    }
+//                    return null;
+//                }
+//
+//                void resolveUseDependencies() {
+//
+//                }
+//             }
 
 //            var queue = new LinkedList<ChapelModule>();
 //            queue.add(fileModule);
