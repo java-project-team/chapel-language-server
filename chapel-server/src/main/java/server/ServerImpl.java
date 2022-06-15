@@ -11,13 +11,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import requests.FileInformation;
-import server.semantic.tokens.ChapelModule;
-import server.semantic.tokens.ChapelProcedure;
-import server.semantic.tokens.ChapelStatement;
-import server.semantic.tokens.ChapelUnnamedStatement;
+import server.semantic.tokens.*;
+
+import static parser.ParserTreeConstants.*;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -106,17 +108,103 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             return CompletableFuture.completedFuture(new SemanticTokens(new ArrayList<>()));
         }
 
+        void importHierarchy(ChapelModule rootModule) {
+            class DFSNode {
+                int successEdges = 0;
+                public final ChapelModule module;
+                public ArrayList<DFSNode> to = new ArrayList<>();
+                public ArrayList<DFSNode> from = new ArrayList<>();
+
+                DFSNode(ChapelModule module) {
+                    this.module = module;
+                }
+
+            }
+
+            LinkedList<ChapelModule> queue = new LinkedList<>();
+            HashMap<ChapelModule, DFSNode> mapFromModuleToNode = new HashMap<>();
+            queue.add(rootModule);
+            while (!queue.isEmpty()) {
+                var module = queue.pollFirst();
+                var node = new DFSNode(rootModule);
+                mapFromModuleToNode.put(rootModule, node);
+                queue.addAll(rootModule.subModules.values());
+            }
+
+            for (var dfsNode : mapFromModuleToNode.values()) {
+                for (var useStatement : dfsNode.module.useStatements) {
+                    ArrayList<ChapelModule> modulesToUseList =
+                            findModuleByUsePath(useStatement, dfsNode.module, rootModule);
+                    if (modulesToUseList == null) {
+                        break;
+                    }
+                    dfsNode.successEdges++;
+                    for (var moduleToUse : modulesToUseList) {
+                        var fromNode = mapFromModuleToNode.get(moduleToUse);
+                        assert fromNode != null;
+                        dfsNode.from.add(fromNode);
+                        fromNode.to.add(dfsNode);
+                    }
+                }
+            }
+
+            Consumer<DFSNode> topSort = (v) -> {
+
+            };
+
+        }
+
+        private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
+                                                 ChapelModule useOwnerModule,
+                                                 ChapelModule rootModule) {
+            ArrayList<ChapelModule> ans = new ArrayList<>();
+            for (var useModuleDec : useStatement.useModules) {
+                Function<ChapelModule, ChapelModule> tryToFindModule = (scopeModule) -> {
+                    for (var moduleName : useModuleDec.modules) {
+                        if (scopeModule == null) {
+                            return null;
+                        }
+                        var moduleToUse = scopeModule.subModules.get(moduleName);
+                        if (moduleToUse == null) {
+                            moduleToUse = scopeModule.usedModules.get(moduleName);
+                        }
+                        if (moduleName.equals("this")) {
+                            moduleToUse = scopeModule;
+                        } else if (moduleName.equals("super")) {
+                            moduleToUse = (ChapelModule) scopeModule.parentStatement;
+                        }
+                        scopeModule = moduleToUse;
+                    }
+                    return scopeModule;
+                };
+
+                var target = tryToFindModule.apply(useOwnerModule);
+                if (target == null) {
+                    if (useModuleDec.modules.get(0).equals("this") || useModuleDec.modules.get(0).equals("super")) {
+                        return null;
+                    }
+                    target = tryToFindModule.apply(rootModule);
+                    if (target == null) {
+                        return null;
+                    }
+                }
+                ans.add(target);
+            }
+            return ans;
+        }
+
         private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
             LOG.info(dump(rootNode, ""));
             ChapelModule fileModule = createChapelModule(rootNode);
+
 //            var ans = getTokensFromChapelStatement(fileModule);
             LOG.info(fileModule.toString());
             class SemanticTokenFinder {
                 final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
                 SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
                     for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
-                        if (subStatement.rootNode.getId() != ParserTreeConstants.JJTUSESTATEMENT) {
+                        if (subStatement.rootNode.getId() != JJTUSESTATEMENT) {
                             continue;
                         }
 
@@ -147,9 +235,11 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             return null;
         }
 
-        private SemanticTokens getTokensFromChapelStatement(ChapelStatement currentModule) {
+        private void getTokensFromChapelStatement(ChapelStatement currentModule) {
+            HashSet<ChapelStatement> visited = new HashSet<>();
+            Runnable x = () -> {
 
-            return null;
+            };
         }
 
         private String dump(SimpleNode rootNode, String prefix) {
@@ -174,8 +264,8 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 //                LOG.info(currentChapelStatement.contentNodes.toString());
                 for (var currentContentNode : currentChapelStatement.contentNodes) {
                     assert currentContentNode != null;
-                    if (currentContentNode.getId() != ParserTreeConstants.JJTSTATEMENT &&
-                            currentContentNode.getId() != ParserTreeConstants.JJTENUMCONSTANT) {
+                    if (currentContentNode.getId() != JJTSTATEMENT &&
+                            currentContentNode.getId() != JJTENUMCONSTANT) {
                         assert false;
                         continue;
                     }
@@ -183,7 +273,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                     assert currentContentNode != null;
                     Token idToken;
                     switch (currentContentNode.getId()) {
-                        case ParserTreeConstants.JJTMODULEDECLARATIONSTATEMENT -> {
+                        case JJTMODULEDECLARATIONSTATEMENT -> {
                             idToken = getIdFromNode(currentContentNode);
                             assert idToken != null;
                             ChapelModule subModule =
@@ -191,10 +281,10 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                                             currentContentNode,
                                             idToken.image);
                             subModule.parentStatement = currentChapelStatement;
-                            currentChapelStatement.modules.put(subModule.name, subModule);
+                            currentChapelStatement.subModules.put(subModule.name, subModule);
                             queue.add(subModule);
                         }
-                        case ParserTreeConstants.JJTPROCEDUREDECLARATIONSTATEMENT -> {
+                        case JJTPROCEDUREDECLARATIONSTATEMENT -> {
                             if (!checkIsProcedure(currentContentNode)) {
                                 continue;
                             }
@@ -205,17 +295,20 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                             procedure.parentStatement = currentChapelStatement.parentStatement;
                             currentChapelStatement.procedures.put(procedure.getName(), procedure);
                         }
-                        case ParserTreeConstants.JJTUSESTATEMENT -> {
+                        case JJTUSESTATEMENT -> {
+                            var useStatement = new ChapelUseStatement(currentContentNode);
+                            useStatement.parentStatement = currentChapelStatement;
+                            currentChapelStatement.useStatements.add(useStatement);
                         }
-                        case ParserTreeConstants.JJTIMPORTSTATEMENT -> {
+                        case JJTIMPORTSTATEMENT -> {
 
                         }
-                        case ParserTreeConstants.JJTVARIABLEDECLARATIONSTATEMENT -> {
+                        case JJTVARIABLEDECLARATIONSTATEMENT -> {
                             idToken = getIdFromNode(currentContentNode);
                             assert idToken != null;
                             currentChapelStatement.variables.add(idToken.image);
                         }
-                        case ParserTreeConstants.JJTCLASSDECLARATIONSTATEMENT -> {
+                        case JJTCLASSDECLARATIONSTATEMENT -> {
                         }
                         default -> {
                             ChapelStatement chapelStatement = new ChapelUnnamedStatement(currentContentNode);

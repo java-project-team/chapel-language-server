@@ -22,19 +22,9 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-*.idea/
-*lib/javacc-javacc-7.0.11/target/
-*build/
-*parser/
-*.gradle/
-*gradlew.bat
-*gradlew
-*gradle/
-
-
-*node_modules/
-*out/
-*.eslintignore
-*.eslintrc.js
-*bin/
-*.vscodeignore
+.idea/
+lib/javacc-javacc-7.0.11/target/
+.gradle/
+gradlew.bat
+gradlew
+gradle/
