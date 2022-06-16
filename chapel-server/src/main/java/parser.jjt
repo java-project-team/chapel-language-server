@@ -313,32 +313,14 @@ void RangeLiteral() :
 void Block()#void:
 {}
 {
-//    try
-//    {
-
-//    try {
-     S()
-//    } catch (Exception e) {
-//        System.out.println("fuck");
-//        error_skipto(SEMICOLON);
-//        throw e;
-//    }
-    <EOF>
-//    } catch (Exception e) {
-//        e.printStackTrace();
-//        System.out.println(e.getStackTrace());
-//    }
-
-}
-void S()#void : {} {
     try {
-        (Statement())*
+        (Statement())* <EOF>
     } catch (Exception e) {
-        System.out.println("fuck");
+//      System.out.println(e.toString());  // print the error message
         error_skipto(SEMICOLON);
-        throw e;
     }
 }
+
 void  ExpressionStatement() :
 {}
 {
@@ -351,6 +333,7 @@ void Statement() :
     try {
     (
     LOOKAHEAD(3)BlockStatement()
+    |  LOOKAHEAD(2)UseStatement()
     | LOOKAHEAD(3)IfStatement()
     |  LOOKAHEAD(3)ForStatement()
     |  LOOKAHEAD(3)SelectStatement()
@@ -360,7 +343,6 @@ void Statement() :
     |  LOOKAHEAD(3)BreakStatement()
     |  LOOKAHEAD(3)ContinueStatement()
     |  LOOKAHEAD(3)ParamForStatement()
-    |  LOOKAHEAD(3)UseStatement()
     |  LOOKAHEAD(3)ImportStatement()
     |  LOOKAHEAD(3)DeferStatement()
     |  LOOKAHEAD(3)EmptyStatement()
@@ -395,14 +377,15 @@ void Statement() :
 
 JAVACODE
 void error_skipto(int kind) {
-//  System.out.println(e.toString());  // print the error message
   Token t;
+//  System.out.println("error found");
   // consume tokens all the way up to a token of "kind" - use a do-while loop
   // rather than a while because the current token is the one immediately before
   // the erroneous token (in our case the token immediately before what should
   // have been "if"/"while".
   do {
     t = getNextToken();
+//    System.out.println(t.toString());
   }
   while (t.kind != kind && t.kind != EOF);
 }

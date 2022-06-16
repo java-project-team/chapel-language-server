@@ -4,5 +4,9 @@ module A {
 
 public A;
 
-public v;
+public use v;
 
+
+module C {
+
+}
