@@ -1,10 +1,11 @@
 package server.semantic.tokens;
 
-public class ChapelProcedure {
-    private final String name;
+import parser.SimpleNode;
 
-    public ChapelProcedure(String name) {
-        this.name = name;
+public class ChapelProcedure extends ChapelNamedStatement {
+
+    public ChapelProcedure(SimpleNode contentNode, String name) {
+        super(contentNode, name);
     }
 
     public String getName() {

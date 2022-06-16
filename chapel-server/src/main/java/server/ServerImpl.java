@@ -5,23 +5,25 @@ import com.google.gson.JsonElement;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.*;
-import parser.Parser;
-import parser.ParserConstants;
-import parser.SimpleNode;
+import parser.*;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import requests.BasicProcessing;
 import requests.DefinitionProvider;
 import parser.Token;
 import requests.FileInformation;
-import server.semantic.tokens.ChapelModule;
-import server.semantic.tokens.ChapelProcedure;
+import server.semantic.tokens.*;
+
+import static parser.ParserTreeConstants.*;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -80,7 +82,6 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                         List.of()));
         capabilities.setSemanticTokensProvider(semanticTokensProvider);
 
-        LOG.info("Initialized");
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }
 
@@ -154,6 +155,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             try {
                 var doc = new File(new URI(params.getTextDocument().getUri()));
                 var rootNode = Parser.parse(doc.getAbsolutePath());
+                assert rootNode != null;
                 SemanticTokens ans = findSemanticTokens(rootNode);
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
@@ -161,16 +163,183 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
             return CompletableFuture.completedFuture(new SemanticTokens(new ArrayList<>()));
         }
 
+        void importHierarchy(ChapelModule rootModule) {
+            class DFSNode {
+                static class Edge {
+                    DFSNode dest;
+                    boolean isPublic;
+
+                    public Edge(DFSNode dest, boolean isPublic) {
+                        this.dest = dest;
+                        this.isPublic = isPublic;
+                    }
+                }
+                int successEdges = 0;
+                int index = 0;
+                public final ChapelModule module;
+                public ArrayList<Edge> to = new ArrayList<>();
+                public ArrayList<Edge> from = new ArrayList<>();
+                static final ArrayList<DFSNode> allDFSNodes = new ArrayList<>();
+                DFSNode(ChapelModule module) {
+                    this.module = module;
+                    index = allDFSNodes.size();
+                    allDFSNodes.add(this);
+                }
+
+                static void topSort(ArrayList<Boolean> visited, LinkedList<DFSNode> order, DFSNode v) {
+                    if (visited.get(v.index)) {
+                        return;
+                    }
+                    visited.set(v.index, true);
+                    for (var to : v.to) {
+                        if (!to.isPublic) {
+                            continue;
+                        }
+                        topSort(visited, order, to.dest);
+                    }
+                    order.addFirst(v);
+                }
+            }
+            DFSNode.allDFSNodes.clear();
+
+            LinkedList<ChapelModule> queue = new LinkedList<>();
+            HashMap<ChapelModule, DFSNode> mapFromModuleToNode = new HashMap<>();
+            queue.add(rootModule);
+            while (!queue.isEmpty()) {
+                var module = queue.pollFirst();
+                var node = new DFSNode(module);
+                mapFromModuleToNode.put(module, node);
+                queue.addAll(module.subModules.values());
+            }
+
+            for (var dfsNode : DFSNode.allDFSNodes) {
+                if (dfsNode.module.useStatements.isEmpty()) {
+                    continue;
+                }
+                for (
+                        var useStatement = dfsNode.module.useStatements.get(dfsNode.successEdges);
+                        dfsNode.successEdges < dfsNode.module.useStatements.size();
+                        dfsNode.successEdges++) {
+                    ArrayList<ChapelModule> modulesToUseList =
+                            findModuleByUsePath(useStatement, dfsNode.module, rootModule);
+                    if (modulesToUseList == null) {
+                        break;
+                    }
+                    dfsNode.successEdges++;
+                    for (var moduleToUse : modulesToUseList) {
+                        var fromNode = mapFromModuleToNode.get(moduleToUse);
+                        if (useStatement.isPublic) {
+                            dfsNode.module.usedModules.putAll(fromNode.module.subModules);
+                        }
+                        assert fromNode != null;
+                        DFSNode.Edge from = new DFSNode.Edge(fromNode, useStatement.isPublic);
+                        DFSNode.Edge to = new DFSNode.Edge(dfsNode, useStatement.isPublic);
+                        dfsNode.from.add(from);
+                        fromNode.to.add(to);
+                    }
+                }
+            }
+//            LOG.info(String.valueOf(DFSNode.allDFSNodes.size()));
+            ArrayList<Boolean> isVisited = new ArrayList<>();
+            for (int i = 0; i < DFSNode.allDFSNodes.size(); i++) {
+                isVisited.add(false);
+            }
+            LinkedList<DFSNode> topSortOrder = new LinkedList<>();
+            for (var dfsNode : DFSNode.allDFSNodes) {
+                DFSNode.topSort(isVisited, topSortOrder, dfsNode);
+            }
+            for (var x : topSortOrder) {
+                LOG.info(x.module.name);
+            }
+        }
+
+        private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
+                                                 ChapelModule useOwnerModule,
+                                                 ChapelModule rootModule) {
+            ArrayList<ChapelModule> ans = new ArrayList<>();
+            for (var useModuleDec : useStatement.useModules) {
+                Function<ChapelModule, ChapelModule> tryToFindModule = (scopeModule) -> {
+                    for (var moduleName : useModuleDec.modules) {
+                        if (scopeModule == null) {
+                            return null;
+                        }
+                        var moduleToUse = scopeModule.subModules.get(moduleName);
+                        if (moduleToUse == null) {
+                            moduleToUse = scopeModule.usedModules.get(moduleName);
+                        }
+                        if (moduleName.equals("this")) {
+                            moduleToUse = scopeModule;
+                        } else if (moduleName.equals("super")) {
+                            moduleToUse = (ChapelModule) scopeModule.parentStatement;
+                        }
+                        scopeModule = moduleToUse;
+                    }
+                    return scopeModule;
+                };
+
+                var target = tryToFindModule.apply(useOwnerModule);
+                if (target == null) {
+                    if (useModuleDec.modules.get(0).equals("this") || useModuleDec.modules.get(0).equals("super")) {
+                        return null;
+                    }
+                    target = tryToFindModule.apply(rootModule);
+                    if (target == null) {
+                        return null;
+                    }
+                }
+                ans.add(target);
+            }
+            return ans;
+        }
+
         private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
+
             LOG.info(dump(rootNode, ""));
-            ChapelModule currentFile = createChapelModule(rootNode);
-            LOG.info(currentFile.toString());
+            ChapelModule fileModule = createChapelModule(rootNode);
+
+//            var ans = getTokensFromChapelStatement(fileModule);
+            LOG.info(fileModule.toString());
+            importHierarchy(fileModule);
+//            class SemanticTokenFinder {
+//                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
+//                SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
+//                    for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
+//                        if (subStatement.rootNode.getId() != JJTUSESTATEMENT) {
+//                            continue;
+//                        }
+//
+//                    }
+//                    return null;
+//                }
+//
+//                void resolveUseDependencies() {
+//
+//                }
+//             }
+
+//            var queue = new LinkedList<ChapelModule>();
+//            queue.add(fileModule);
+//            while (!queue.isEmpty()) {
+//                var currentModule = queue.pollFirst();
+//                queue.addAll(currentModule.modules.values());
+//
+//                SemanticTokens tokensFromModule = getTokensFromModule(currentModule);
+//            }
+
+
             // бфсом идти по модулям
             // В модуле:
             //   составить иерархию импортов
             //   обойти бфсом исполняемые стейтменты для конкретного модуля
 
             return null;
+        }
+
+        private void getTokensFromChapelStatement(ChapelStatement currentModule) {
+            HashSet<ChapelStatement> visited = new HashSet<>();
+            Runnable x = () -> {
+
+            };
         }
 
         private String dump(SimpleNode rootNode, String prefix) {
@@ -186,51 +355,66 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         private ChapelModule createChapelModule(SimpleNode rootNode) {
             var fileModule = new ChapelModule(rootNode, "");
-            var queue = new LinkedList<ChapelModule>();
+            var queue = new LinkedList<ChapelStatement>();
             queue.add(fileModule);
-            ChapelModule currentModule;
-            SimpleNode currentNode;
+            ChapelStatement currentChapelStatement;
             while (!queue.isEmpty()) {
-                currentModule = queue.poll();
-                currentNode = currentModule.getContentNode();
-                int numChildren = currentNode.jjtGetNumChildren();
-                for (int i = 0; i < numChildren; i++) {
-                    var statement = (SimpleNode) currentNode.jjtGetChild(i);
-                    assert statement != null;
-                    if (!statement.toString().equals("Statement")) {
+                currentChapelStatement = queue.poll();
+//                LOG.info(currentChapelStatement.rootNode.toString());
+//                LOG.info(currentChapelStatement.contentNodes.toString());
+                for (var currentContentNode : currentChapelStatement.contentNodes) {
+                    assert currentContentNode != null;
+                    if (currentContentNode.getId() != JJTSTATEMENT &&
+                            currentContentNode.getId() != JJTENUMCONSTANT) {
+                        assert false;
                         continue;
                     }
-                    statement = (SimpleNode) statement.jjtGetChild(0);
-                    assert statement != null;
-//                    LOG.info(statement.toString());
+                    currentContentNode = (SimpleNode) currentContentNode.jjtGetChild(0);
+                    assert currentContentNode != null;
                     Token idToken;
-                    switch (statement.toString()) {
-                        case "ModuleDeclarationStatement" -> {
-                            idToken = getIdFromNode(statement);
+                    switch (currentContentNode.getId()) {
+                        case JJTMODULEDECLARATIONSTATEMENT -> {
+                            idToken = getIdFromNode(currentContentNode);
                             assert idToken != null;
                             ChapelModule subModule =
                                     new ChapelModule(
-                                            // take a block
-                                            (SimpleNode) statement.jjtGetChild(statement.jjtGetNumChildren() - 1),
+                                            currentContentNode,
                                             idToken.image);
-                            currentModule.getModules().put(subModule.getName(), subModule);
+                            subModule.parentStatement = currentChapelStatement;
+                            currentChapelStatement.subModules.put(subModule.name, subModule);
                             queue.add(subModule);
                         }
-                        case "ProcedureDeclarationStatement" -> {
-                            if (!checkIsProcedure(currentNode)) {
+                        case JJTPROCEDUREDECLARATIONSTATEMENT -> {
+                            if (!checkIsProcedure(currentContentNode)) {
                                 continue;
                             }
-                            idToken = getIdFromNode(statement);
+                            idToken = getIdFromNode(currentContentNode);
                             assert idToken != null;
-                            ChapelProcedure procedure = new ChapelProcedure(idToken.image);
-                            currentModule.getProcedures().put(procedure.getName(), procedure);
+                            ChapelProcedure procedure = new ChapelProcedure(currentContentNode, idToken.image);
+                            queue.add(procedure);
+                            procedure.parentStatement = currentChapelStatement.parentStatement;
+                            currentChapelStatement.procedures.put(procedure.getName(), procedure);
                         }
-                        case "VariableDeclarationStatement" -> {
-                            idToken = getIdFromNode(currentNode);
+                        case JJTUSESTATEMENT -> {
+                            var useStatement = new ChapelUseStatement(currentContentNode);
+                            useStatement.parentStatement = currentChapelStatement;
+                            currentChapelStatement.useStatements.add(useStatement);
+                        }
+                        case JJTIMPORTSTATEMENT -> {
+
+                        }
+                        case JJTVARIABLEDECLARATIONSTATEMENT -> {
+                            idToken = getIdFromNode(currentContentNode);
                             assert idToken != null;
-                            currentModule.getVariables().add(idToken.image);
+                            currentChapelStatement.variables.add(idToken.image);
+                        }
+                        case JJTCLASSDECLARATIONSTATEMENT -> {
                         }
                         default -> {
+                            ChapelStatement chapelStatement = new ChapelUnnamedStatement(currentContentNode);
+                            chapelStatement.parentStatement = currentChapelStatement.parentStatement;
+                            currentChapelStatement.subStatements.add(chapelStatement);
+                            queue.add(chapelStatement);
                         }
                     }
                 }
@@ -294,6 +478,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                 switch (child.toString()) {
                     case "ExpressionStatement":
                         break;
+                    // var x = 10;
                     case "VariableDeclarationStatement":
                         for (int j = 0; j < child.jjtGetNumChildren(); j++) {
                             var notTerm = (SimpleNode) child.jjtGetChild(j);

@@ -36,7 +36,6 @@ export function activate(context: ExtensionContext) {
 
 		command: "java",
 		args: ["-jar", path.resolve(context.extensionPath, "chapel-server", "build", "libs", "server.jar")]
-		// args: ["-jar", "/home/rmzs/IdeaProjects/scala-language-server/chapel-server/build/libs/server.jar"]
 	};
 
 	// Options to control the language client
@@ -52,7 +51,7 @@ export function activate(context: ExtensionContext) {
 	// Create the language client and start the client.
 	client = new LanguageClient(
 		'languageServerExample',
-		'Language Server Example',
+		'Chapel Server',
 		serverOptions,
 		clientOptions
 	);

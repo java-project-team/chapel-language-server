@@ -2,19 +2,33 @@
 package ru.hse.fmcs;
 
 import org.junit.jupiter.api.Test;
+import parser.ParseException;
 import parser.Parser;
 import requests.BasicProcessing;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestsBasicProcessing {
     @Test
-    public void rat() {
+    public void rat() throws FileNotFoundException, ParseException {
+//        var x = Parser.parse("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java");
         var x = Parser.parse("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/a.txt");
+
         assert x != null;
         x.dump("");
+
+//        var x = new Parser(new FileInputStream("/home/rmzs/IdeaProjects/scala-language-server/chapel-server/src/test/resources/code.java"));
+//
+//        try {
+//            var n = x.File();
+//            n.dump("");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Test

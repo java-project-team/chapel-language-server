@@ -7,6 +7,7 @@ options
 }
 PARSER_BEGIN(Parser)
 package parser;
+import org.checkerframework.checker.signature.qual.Identifier;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
@@ -281,7 +282,11 @@ TOKEN :
 SimpleNode File() :
 {}
 {
-    Block()
+//    try {
+        Block()
+//    } catch(Exception e) {
+//        error_skipto(SEMICOLON);
+//    }
     {return jjtThis;}
 }
 
@@ -308,13 +313,12 @@ void RangeLiteral() :
 void Block()#void:
 {}
 {
-    (
     try {
-        Statement()
-    } catch (ParseException e) {
+        (Statement())* <EOF>
+    } catch (Exception e) {
+//      System.out.println(e.toString());  // print the error message
         error_skipto(SEMICOLON);
     }
-    )* <EOF>
 }
 
 void  ExpressionStatement() :
@@ -326,8 +330,10 @@ void  ExpressionStatement() :
 void Statement() :
 {}
 {
-//    try {
+    try {
+    (
     LOOKAHEAD(3)BlockStatement()
+    |  LOOKAHEAD(2)UseStatement()
     | LOOKAHEAD(3)IfStatement()
     |  LOOKAHEAD(3)ForStatement()
     |  LOOKAHEAD(3)SelectStatement()
@@ -337,7 +343,6 @@ void Statement() :
     |  LOOKAHEAD(3)BreakStatement()
     |  LOOKAHEAD(3)ContinueStatement()
     |  LOOKAHEAD(3)ParamForStatement()
-    |  LOOKAHEAD(3)UseStatement()
     |  LOOKAHEAD(3)ImportStatement()
     |  LOOKAHEAD(3)DeferStatement()
     |  LOOKAHEAD(3)EmptyStatement()
@@ -362,20 +367,27 @@ void Statement() :
     |  LOOKAHEAD(3)DeleteStatement()
     |  LOOKAHEAD(3)ManageStatement()
     | LOOKAHEAD(3)ExpressionStatement()
+    )
+   } catch (ParseException e) {
+        System.out.println(e.getMessage());
+        error_skipto(SEMICOLON);
+    //        throw e;
+   }
 }
 
 JAVACODE
 void error_skipto(int kind) {
-//  System.out.println(e.toString());  // print the error message
   Token t;
+//  System.out.println("error found");
   // consume tokens all the way up to a token of "kind" - use a do-while loop
   // rather than a while because the current token is the one immediately before
   // the erroneous token (in our case the token immediately before what should
   // have been "if"/"while".
   do {
     t = getNextToken();
+//    System.out.println(t.toString());
   }
-  while (t.kind != kind && t.kind != NEWLINE && t.kind != EOF);
+  while (t.kind != kind && t.kind != EOF);
 }
 
 void SelectStatement() :
@@ -383,7 +395,7 @@ void SelectStatement() :
 {
     <SELECT> Expression() "{"
     (
-    (<WHEN> Expression() ("," Expression())* ((<DO> Statement()) | BlockStatement()))
+    (<WHEN> Expression() ("," Expression())* [<DO>] Statement())
     | (<OTHERWISE> (Statement() | (<DO> Statement() )))
     )*
     "}"
@@ -391,14 +403,14 @@ void SelectStatement() :
 void CTRLDecl() :
 {}
 {
-     (<VAR> | <CONST>) <ID> <EQUAL> Expression()
+     (<VAR> | <CONST>) Identifier() <EQUAL> Expression()
 
 }
 void WhileDoStatement() :
 {}
 {
     <WHILE>
-    (Expression() | CTRLDecl())  (<DO> Statement() | BlockStatement())
+    (Expression() | CTRLDecl())  [<DO> ]Statement()
 }
 
 void DoWhileStatement() :
@@ -410,11 +422,8 @@ void DoWhileStatement() :
 void ForStatement() :
 {}
 {
-    <FOR> [LOOKAHEAD(3)(<ID> | "(" <ID> ("," <ID>)* ")" ) <IN>] IterableExpr()
-    (
-    (<DO> Statement())
-    | BlockStatement()
-    )
+    <FOR> [LOOKAHEAD(3)(Identifier() | ("(" Identifier() ("," Identifier())* ")") ) <IN>] IterableExpr()
+    [<DO> ]Statement()
 }
 
 void IterableExpr() :
@@ -426,22 +435,22 @@ void IterableExpr() :
 void LabelStatement() :
 {}
 {
-    <LABEL> <ID> Statement()
+    <LABEL> Identifier() Statement()
 }
 void BreakStatement() :
 {}
 {
-    <BREAK> [LOOKAHEAD(2)<ID>]
+    <BREAK> [LOOKAHEAD(2)Identifier()]
 }
 void ContinueStatement() :
 {}
 {
-    <CONTINUE> [LOOKAHEAD(2)<ID>]
+    <CONTINUE> [LOOKAHEAD(2)Identifier()]
 }
 void ParamForStatement() :
 {}
 {
-    <FOR> <PARAM> <ID> <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] (<DO> Statement() | BlockStatement() )
+    <FOR> <PARAM> Identifier() <IN> RangeLiteral() [<BY> <INTEGER_LITERAL>] [<DO> ] Statement()
 }
 void UseStatement() :
 {}
@@ -460,20 +469,21 @@ void Exclude() :
 {}
 {
     Operator()
-    | <ID>
+    | Identifier()
 }
 
 void ModuleOrEnumName() :
 {}
 {
-    LOOKAHEAD(3)(RenameBase())
-    |LOOKAHEAD(3)(<ID> <DOT> ModuleOrEnumName())
+//    LOOKAHEAD(3)(RenameBase())
+//    |LOOKAHEAD(3)(Identifier() <DOT> ModuleOrEnumName())
+    (Identifier() | Operator()) ( <DOT> (Identifier() | Operator()) )* [<AS> (Identifier() | <WILDCARD>)]
 }
 
 void RenameBase() :
 {}
 {
-    (<ID> [<AS> (<ID> | <WILDCARD> ) ])
+    (Identifier() [<AS> (Identifier() | <WILDCARD> ) ])
     | Operator()
 }
 
@@ -486,21 +496,26 @@ void ImportStatement() :
 void ImportExpr() :
 {}
 {
-    LOOKAHEAD(3)ModuleOrSymbolRename()
-    | LOOKAHEAD(3)ModuleOrSymbolBase() UnqualifiedList()
+//(Identifier()
+    [Identifier()] (<DOT> Identifier())* [(
+     (<AS> (Identifier() | <WILDCARD> ) )
+     | Operator()
+     | UnqualifiedList() )]
+//    LOOKAHEAD(3)ModuleOrSymbolRename()
+//    | LOOKAHEAD(3)(ModuleOrSymbolBase() UnqualifiedList())
 }
 
 void ModuleOrSymbolBase() :
 {}
 {
-    <ID>[LOOKAHEAD(3)<DOT> ModuleOrSymbolBase()]
+    Identifier()[LOOKAHEAD(3)<DOT> ModuleOrSymbolBase()]
 }
 
 void ModuleOrSymbolRename() :
 {}
 {
     LOOKAHEAD(3)RenameBase()
-    | LOOKAHEAD(3)<ID> <DOT> ModuleOrSymbolRename()
+    | LOOKAHEAD(3)Identifier() <DOT> ModuleOrSymbolRename()
 }
 
 void UnqualifiedList() :
@@ -535,7 +550,7 @@ void YieldStatement() :
 void ModuleDeclarationStatement() :
 {}
 {
-    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> <ID> BlockStatement()
+    [PrivacySpecifier()] [<PROTOTYPE>] <MODULE> Identifier() Statement()
 }
 
 void ProcedureDeclarationStatement() :
@@ -543,17 +558,11 @@ void ProcedureDeclarationStatement() :
 {
     [PrivacySpecifier()]
     [ProcKind()]
-    (<PROC> <ID> [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
+    (<PROC> Identifier() [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
     [LOOKAHEAD(3)ReturnIntent()]
     [ReturnType() ]
-    [WhereClause() ] FunctionBody()
+    [WhereClause() ] Statement()
 
-}
-
-void FunctionBody():
-{}
-{
-    BlockStatement() | ReturnStatement()
 }
 
 void WhereClause() : {}
@@ -569,20 +578,20 @@ void ReturnType() :
 void ExternalProcedureDeclarationStatement() :
 {}
 {
-    <EXTERN> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType()]
+    <EXTERN> [Expression()] <PROC> Identifier() ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType()]
 }
 
 void ExportedProcedureDeclarationStatement() :
 {}
 {
-    <EXPORT> [Expression()] <PROC> <ID> ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType() ]
+    <EXPORT> [Expression()] <PROC> Identifier() ArgumentList() [LOOKAHEAD(3)ReturnIntent()] [ReturnType() ]
 }
 
 void IteratorDeclarationStatement() :
 {}
 {
-    [PrivacySpecifier() ] <ITER> <ID> [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
-    (YieldStatement() | BlockStatement())
+    [PrivacySpecifier() ] <ITER> Identifier() [ArgumentList()] [YieldIntent() ] [YieldType() ] [WhereClause() ]
+     Statement()
 }
 
 void YieldType() :
@@ -603,12 +612,12 @@ void MethodDeclarationStatement() :
 {}
 {
     [ProcKind()] (<PROC> | <ITER>) [ThisIntent()]  [LOOKAHEAD(3)TypeBinding()]
-        <ID> [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  FunctionBody()
+        Identifier() [ArgumentList() ] [ReturnIntent()] [ReturnType()] [WhereClause()]  Statement()
 }
 
 void TypeBinding() : {}
 {
-    (<ID> <DOT>)
+    (Identifier() <DOT>)
     | ("(" Expression() ")" <DOT>)
 }
 
@@ -634,20 +643,20 @@ void TypeDeclarationStatement() :
 void EnumDeclarationStatement() :
 {}
 {
-  <ENUM> <ID> "{" EnumConstantList() "}"
+  <ENUM> Identifier() EnumBody()
 }
 
-void EnumConstantList() :
-{}
+void EnumBody() : {}
 {
-  LOOKAHEAD(3)EnumConstant()
-|  LOOKAHEAD(3)EnumConstant() "," [EnumConstantList()]
+    "{" EnumConstant() ("," EnumConstant())* "}"
 }
+
+
 
 void EnumConstant():
 {}
 {
-    <ID> [InitPart()]
+    Identifier() [InitPart()]
 }
 
 void InitPart(): {}
@@ -657,7 +666,7 @@ void InitPart(): {}
 
 void ClassDeclarationStatement(): {}
 {
-    <CLASS> <ID> [ClassInherit()] "{"[ ClassStatementList()]"}"
+    <CLASS> Identifier() [ClassInherit()] Statement()
 }
 
 void ClassInherit() :
@@ -669,30 +678,15 @@ void ClassInherit() :
 void BasicClassType() :
 {}
 {
-    LOOKAHEAD(3)<ID> "(" NamedExpression() ("," NamedExpression())* ")"
-    |LOOKAHEAD(3)<ID>
+    Identifier() ["(" NamedExpression() ("," NamedExpression())* ")"]
+
 }
 
 void  NamedExpression() :
 {}
 {
     LOOKAHEAD(3)Expression()
-    |LOOKAHEAD(3)<ID> "=" Expression()
-}
-
-void ClassStatementList() :
-{}
-{
-    ClassStatement() (ClassStatement())*
-}
-
-void ClassStatement() :
-{}
-{
-    LOOKAHEAD(3)VariableDeclarationStatement()
-    |LOOKAHEAD(3)MethodDeclarationStatement()
-    |TypeDeclarationStatement()
-    |EmptyStatement()
+    |LOOKAHEAD(3)Identifier() "=" Expression()
 }
 
 void RecordDeclarationStatement() :
@@ -713,46 +707,13 @@ void Identifier() :{} {<ID>}
 void SimpleRecordDeclarationStatement() :
 {}
 {
-    <RECORD> Identifier() "{" RecordStatementList() "}"
-}
-
-void RecordStatementList() :
-{}
-{
-    LOOKAHEAD(3)RecordStatement()
-    |LOOKAHEAD(3)RecordStatement() RecordStatementList()
-}
-
-void RecordStatement() :
-{}
-{
-    LOOKAHEAD(3)VariableDeclarationStatement()
-    |LOOKAHEAD(3)MethodDeclarationStatement()
-    |TypeDeclarationStatement()
-    |EmptyStatement()
+    <RECORD> Identifier() Statement()
 }
 
 void UnionDeclarationStatement() :
 {}
 {
-    [<EXTERN> ] <UNION> Identifier() "{" UnionStatementList()"}"
-}
-
-void UnionStatementList() :
-{}
-{
-    LOOKAHEAD(3)UnionStatement() UnionStatementList()
-    |LOOKAHEAD(3)UnionStatement()
-}
-
-void UnionStatement() :
-{}
-{
-    LOOKAHEAD(3)TypeDeclarationStatement()
-    |LOOKAHEAD(3)ProcedureDeclarationStatement()
-    |LOOKAHEAD(3)IteratorDeclarationStatement()
-    |VariableDeclarationStatement()
-    |EmptyStatement()
+    [<EXTERN> ] <UNION> Identifier() Statement()
 }
 
 void TypeAliasDeclarationStatement() :
@@ -766,13 +727,6 @@ void  ExternalTypeAliasDeclarationStatement() :
 {}
 {
     <EXTERN> [Expression()] <TYPE> TypeAliasDeclaration() ("," TypeAliasDeclaration())*
-}
-
-void TypeAliasDeclarationList() :
-{}
-{
-    LOOKAHEAD(3)TypeAliasDeclaration() "," TypeAliasDeclarationList()
-    |LOOKAHEAD(3)TypeAliasDeclaration()
 }
 
 void TypeAliasDeclaration() :
@@ -843,7 +797,7 @@ void IdentifierList() :
 void TupleGroupedIdentifierList() :
 {}
 {
-    "(" (Identifier() ("," Identifier())* ) ")"
+    "(" [Identifier() ("," Identifier())* ] ")"
 }
 
 void RemoteVariableDeclarationStatement() :
@@ -855,14 +809,14 @@ void RemoteVariableDeclarationStatement() :
 void OnStatement() :
 {}
 {
-    LOOKAHEAD(3)<ON> Expression() <DO> Statement()
-    |LOOKAHEAD(3)<ON> Expression() BlockStatement()
+    <ON> Expression()
+    [<DO>] Statement()
 }
 
 void CobeginStatement() :
 {}
 {
-    <COBEGIN> [TaskIntentClause()] BlockStatement()
+    <COBEGIN> [TaskIntentClause()] Statement()
 }
 
 
@@ -933,7 +887,7 @@ void CoforallStatement() :
 {}
 {
     <COFORALL> (IndexVarDeclaration() | IteratableExpression() )
-    [<IN> IteratableExpression()] [TaskIntentClause()] ((<DO> Statement()) | BlockStatement())
+    [<IN> IteratableExpression()] [TaskIntentClause()] [<DO>] Statement()
 }
 
 void  IteratableExpression() :
@@ -967,8 +921,7 @@ void  BeginStatement() :
 void  SyncStatement() :
 {}
 {
- LOOKAHEAD(3)<SYNC> Statement()
-|LOOKAHEAD(3)<SYNC> BlockStatement()
+ <SYNC> Statement()
 }
 
 void  SyncType() :
@@ -980,8 +933,7 @@ void  SyncType() :
 void  SerialStatement() :
 {}
 {
- LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] <DO> Statement()
-|LOOKAHEAD(3)<SERIAL> [LOOKAHEAD(3)Expression()] BlockStatement()
+ <SERIAL> [LOOKAHEAD(3)Expression()] [<DO>] Statement()
 }
 
 void  AtomicType() :
@@ -1000,7 +952,7 @@ void  ForallStatement() :
 {}
 {
     (<FORALL> (IndexVarDeclaration() | IteratableExpression()) [<IN> IteratableExpression()] [TaskIntentClause()]
-     ((<DO> Statement()) | BlockStatement()) )
+     [<DO>] Statement() )
     | ("[" (IndexVarDeclaration() | IteratableExpression())
         [<IN> IteratableExpression()] [TaskIntentClause()] "]" Statement()
         )
@@ -1015,16 +967,13 @@ void  DeleteStatement() :
 void ManageStatement() :
 {}
 {
-    LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* <DO> Statement()
-    |LOOKAHEAD(3)<MANAGE> ManagerExpression() ("," ManagerExpression())* BlockStatement()
+    <MANAGE> ManagerExpression() ("," ManagerExpression())* [<DO>] Statement()
 }
 
 void ManagerExpression() :
 {}
 {
-LOOKAHEAD(3)Expression() <AS> VariableKind() Identifier()
-|LOOKAHEAD(3)Expression() <AS> Identifier()
-|LOOKAHEAD(3)Expression()
+    Expression() [<AS> [VariableKind()] Identifier()]
 }
 
 void  ParenthesizedExpression() :
@@ -1063,7 +1012,7 @@ void IfStatement() :
 {}
 {
     <IF> (Expression() | CTRLDecl() )
-    (<THEN> Statement() | BlockStatement())
+    [<THEN>] Statement()
     [LOOKAHEAD(3)<ELSE> Statement()]
 }
 
@@ -1220,14 +1169,14 @@ void FormalType() :
 void VariableArgumentExpr() :
 {}
 {
-    <ARGS> (Expression()  | LOOKAHEAD(3)"?" <ID>)?
+    <ARGS> (Expression()  | LOOKAHEAD(3)"?" Identifier())?
 }
 
 void Formal() :
 {}
 {
      [ FormalIntent()]
-      (<ID> | TupleGroupedIdentifierList())
+      (Identifier() | TupleGroupedIdentifierList())
       [FormalType()]
       ("=" Expression()  | VariableArgumentExpr() )?
 }
