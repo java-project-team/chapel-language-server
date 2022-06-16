@@ -39,4 +39,5 @@ module Main {
     config const printLocaleName = true;
     printLocaleName = false;
     foo();
+    Zun.foo();
 }

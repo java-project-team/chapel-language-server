@@ -4,20 +4,23 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.xtext.xbase.lib.Pair;
 import parser.SimpleNode;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class Vertex {
     public static Pair<SimpleNode, List<String>> findModule(Logger LOG, Position position, SimpleNode root) {
         var vertex = find(LOG, position, root);
+        return findModule(LOG, vertex);
+    }
+    public static Pair<SimpleNode, List<String>> findModule(Logger LOG, SimpleNode vertex) {
         List<String> ans = new ArrayList<>();
         for (var node = vertex; node != null; node = (SimpleNode) node.jjtGetParent()) {
             if (Objects.equals(node.toString(), "ModuleDeclarationStatement")) {
                 ans.add(node.jjtGetFirstToken().next.image);
             }
         }
+        Collections.reverse(ans);
         return new Pair<>(vertex, ans);
     }
 
