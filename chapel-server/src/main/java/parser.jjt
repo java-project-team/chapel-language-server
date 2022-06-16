@@ -740,7 +740,7 @@ void VariableDeclarationStatement() :
 {}
 {
     [PrivacySpecifier()] [ConfigExternOrExport()] VariableKind()
-    VariableDeclarationList() ";" // норм же? да, вроде, норм
+    VariableDeclarationList() ";"
 }
 
 void ConfigExternOrExport():

@@ -226,7 +226,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ChapelModule fileModule = createChapelModule(rootNode);
 
 //            var ans = getTokensFromChapelStatement(fileModule);
-        LOG.info(fileModule.toString());
+        //LOG.info(fileModule.toString());
         importHierarchy(fileModule);
 //            class SemanticTokenFinder {
 //                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();

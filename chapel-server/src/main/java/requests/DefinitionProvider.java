@@ -28,25 +28,22 @@ public class DefinitionProvider {
         //filesInformation.addFile(uri);
         //SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
         //var vertexWithModule = new Pair<>(var, modules);
-        LOG.info("FFF 41");
         var trueModules = Vertex.findModule(LOG, var).getValue();
         trueModules.addAll(modules);
-        LOG.info("FFF 43");
         modules = trueModules;
-        LOG.info("modules: " + modules.toString());
+        //LOG.info("modules: " + modules.toString());
         var module = filesInformation.getFileInformation(uri);
         for (var i = 0; i < modules.size(); i++) {
             module = module.getUseModules().get(modules.get(i));
         }
 
         List<SimpleNode> declarations;
-        LOG.info("mb type: " + var.toString() + "  " + var.jjtGetFirstToken().image + " " + (module == null));
+        //LOG.info("mb type: " + var.toString() + "  " + var.jjtGetFirstToken().image + " " + (module == null));
         if (Objects.equals(var.jjtGetFirstToken().next.image, "(")) {
             declarations = module
                     .getFunctions()
                     .stream()
                     .filter((a) -> {
-                        LOG.info("FFF");
                         return Objects.equals(a.getName(), var.jjtGetFirstToken().image);
                     })
                     .map(DefinitionFunction::getNode)
@@ -59,7 +56,6 @@ public class DefinitionProvider {
                     .map(DefinitionVariable::getNode)
                     .toList();
         }
-        LOG.info("FFF 4");
         SimpleNode ans = null;
         for (var i : declarations) {
             if (Vertex.isStartsEarlier(i, var) && (ans == null || Vertex.isStartsEarlier(ans, i))) {
@@ -190,38 +186,6 @@ public class DefinitionProvider {
         return null;
     }
 
-    /*public List<Location> findDeclaration(Logger LOG, String uri, Position position) {
-        filesInformation.addFile(uri);
-        SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
-        var vertexWithModule = Vertex.findModule(LOG, position, root);
-        var module = filesInformation.getFileInformation(uri);
-        for (var i = vertexWithModule.getValue().size() - 1; i >= 0; i--) {
-            module = module.getUseModules().get(vertexWithModule.getValue().get(i));
-            LOG.info("MMM 1 " + module.getNameModule());
-        }
-
-        LOG.info("MMM 3 " + module.getVariables().size());
-        var declarations = module
-                .getVariables()
-                .stream()
-                .filter((a) -> Objects.equals(a.getName(), vertexWithModule.getKey().jjtGetFirstToken().image))
-                .map(DefinitionVariable::getNode)
-                .toList();
-        LOG.info("MMM 3 " + declarations.size());
-        SimpleNode ans = null;
-        for (var i : declarations) {
-            if (Vertex.isStartsEarlier(i, vertexWithModule.getKey()) && (ans == null || Vertex.isStartsEarlier(ans, i))) {
-                ans = i;
-            }
-        }
-        if (ans == null) {
-            return new ArrayList<>();
-        }
-        return List.of(new Location(uri, new Range(new Position(ans.jjtGetFirstToken().beginLine,
-                ans.jjtGetFirstToken().beginColumn), new Position(ans.jjtGetLastToken().endLine,
-                ans.jjtGetLastToken().endColumn))));
-    }*/
-
     private static boolean isVarDeclaration(Logger LOG, SimpleNode vertexVariable, SimpleNode vertex) {
         if (!Objects.equals(vertex.toString(), "VariableDeclarationStatement")) {
             return false;
@@ -250,7 +214,7 @@ public class DefinitionProvider {
         List<Pair<String, SimpleNode>> ans = new ArrayList<>();
         {
             List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
-            LOG.info(functions.toString());
+            //LOG.info(functions.toString());
             for (DefinitionFunction i : functions) {
                 if (Objects.equals(i.getName(), function)) {
                     ans.add(new Pair<>(file, i.getNode()));
