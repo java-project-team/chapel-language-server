@@ -176,9 +176,9 @@ public class ChapelTextDocumentService implements TextDocumentService {
         for (var dfsNode : DFSNode.allDFSNodes) {
             DFSNode.topSort(isVisited, topSortOrder, dfsNode);
         }
-        for (var x : topSortOrder) {
+        /*for (var x : topSortOrder) {
             LOG.info(x.module.name);
-        }
+        }*/
     }
 
     private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
@@ -222,7 +222,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
-        LOG.info(dump(rootNode, ""));
+        //LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
 
 //            var ans = getTokensFromChapelStatement(fileModule);

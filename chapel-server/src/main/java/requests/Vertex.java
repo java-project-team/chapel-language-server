@@ -1,12 +1,26 @@
 package requests;
 
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.xtext.xbase.lib.Pair;
 import parser.SimpleNode;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 public class Vertex {
+    public static Pair<SimpleNode, List<String>> findModule(Logger LOG, Position position, SimpleNode root) {
+        var vertex = find(LOG, position, root);
+        List<String> ans = new ArrayList<>();
+        for (var node = vertex; node != null; node = (SimpleNode) node.jjtGetParent()) {
+            if (Objects.equals(node.toString(), "ModuleDeclarationStatement")) {
+                ans.add(node.jjtGetFirstToken().next.image);
+            }
+        }
+        return new Pair<>(vertex, ans);
+    }
+
     // по заданной локации ищет вершину в дереве
     static SimpleNode find(Logger LOG, Position position, SimpleNode root) {
         if (root == null || position == null) {

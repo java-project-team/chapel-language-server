@@ -24,6 +24,67 @@ public class DefinitionProvider {
         return null;
     }
 
+    public List<Location> findDeclarationInModule(Logger LOG, String uri, SimpleNode var, List<String> modules) {
+        //filesInformation.addFile(uri);
+        //SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
+        //var vertexWithModule = new Pair<>(var, modules);
+        var module = filesInformation.getFileInformation(uri);
+        for (var i = 0; i < modules.size(); i++) {
+            module = module.getUseModules().get(modules.get(i));
+        }
+
+        List<SimpleNode> declarations;
+        LOG.info("mb type: " + var.toString());
+        if (Objects.equals(var.jjtGetFirstToken().next.image, "(")) {
+            declarations = module
+                    .getFunctions()
+                    .stream()
+                    .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image))
+                    .map(DefinitionFunction::getNode)
+                    .toList();
+        } else {
+            declarations = module
+                    .getVariables()
+                    .stream()
+                    .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image))
+                    .map(DefinitionVariable::getNode)
+                    .toList();
+        }
+        SimpleNode ans = null;
+        for (var i : declarations) {
+            if (Vertex.isStartsEarlier(i, var) && (ans == null || Vertex.isStartsEarlier(ans, i))) {
+                ans = i;
+            }
+        }
+        if (ans == null) {
+            return new ArrayList<>();
+        }
+        return List.of(new Location(uri, new Range(new Position(ans.jjtGetFirstToken().beginLine,
+                ans.jjtGetFirstToken().beginColumn), new Position(ans.jjtGetLastToken().endLine,
+                ans.jjtGetLastToken().endColumn))));
+    }
+
+    public List<Location> findDeclaration(Logger LOG, String uri, Position position) {
+        filesInformation.addFile(uri);
+        SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
+        SimpleNode vertex = Vertex.find(LOG, position, root);
+        List<String> modules = new ArrayList<>();
+        if (vertex != null) {
+            for (int i = 0; i <= vertex.jjtGetParent().jjtGetNumChildren() && Objects.equals((vertex.jjtGetParent().jjtGetChild(i)).toString(), "Identifier") && vertex != vertex.jjtGetParent().jjtGetChild(i); i++){
+                modules.add(((SimpleNode)vertex.jjtGetParent().jjtGetChild(i)).jjtGetFirstToken().image);
+            }
+        }
+        if (modules.isEmpty()) {
+            var ans = findDeclarationNode(LOG, uri, position);
+            return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+                    res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
+                    res.getValue().jjtGetLastToken().endColumn)))).toList();
+        }
+        return findDeclarationInModule(LOG, uri, vertex, modules);
+    }
+
+
+    ///////////////////////////////////////////////////////////////////
     private class ReturnFindDeclarationNode {
         public static class Const {
             final static int FUNCTION_DECLARATION = 1;
@@ -46,8 +107,6 @@ public class DefinitionProvider {
     public ReturnFindDeclarationNode findDeclarationNode(Logger LOG, String uri, Position position) {
         filesInformation.addFile(uri);
         SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
-        LOG.info(root.toString());
-
         SimpleNode vertex = Vertex.find(LOG, position, root);
         if (vertex == null) {
             return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.NOTHING_DECLARATION, new ArrayList<>(), "");
@@ -121,12 +180,37 @@ public class DefinitionProvider {
         return null;
     }
 
-    public List<Location> findDeclaration(Logger LOG, String uri, Position position) {
-        var ans = findDeclarationNode(LOG, uri, position);
-        return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
-                res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
-                res.getValue().jjtGetLastToken().endColumn)))).toList();
-    }
+    /*public List<Location> findDeclaration(Logger LOG, String uri, Position position) {
+        filesInformation.addFile(uri);
+        SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
+        var vertexWithModule = Vertex.findModule(LOG, position, root);
+        var module = filesInformation.getFileInformation(uri);
+        for (var i = vertexWithModule.getValue().size() - 1; i >= 0; i--) {
+            module = module.getUseModules().get(vertexWithModule.getValue().get(i));
+            LOG.info("MMM 1 " + module.getNameModule());
+        }
+
+        LOG.info("MMM 3 " + module.getVariables().size());
+        var declarations = module
+                .getVariables()
+                .stream()
+                .filter((a) -> Objects.equals(a.getName(), vertexWithModule.getKey().jjtGetFirstToken().image))
+                .map(DefinitionVariable::getNode)
+                .toList();
+        LOG.info("MMM 3 " + declarations.size());
+        SimpleNode ans = null;
+        for (var i : declarations) {
+            if (Vertex.isStartsEarlier(i, vertexWithModule.getKey()) && (ans == null || Vertex.isStartsEarlier(ans, i))) {
+                ans = i;
+            }
+        }
+        if (ans == null) {
+            return new ArrayList<>();
+        }
+        return List.of(new Location(uri, new Range(new Position(ans.jjtGetFirstToken().beginLine,
+                ans.jjtGetFirstToken().beginColumn), new Position(ans.jjtGetLastToken().endLine,
+                ans.jjtGetLastToken().endColumn))));
+    }*/
 
     private static boolean isVarDeclaration(Logger LOG, SimpleNode vertexVariable, SimpleNode vertex) {
         if (!Objects.equals(vertex.toString(), "VariableDeclarationStatement")) {
@@ -185,9 +269,9 @@ public class DefinitionProvider {
         }
 
         SimpleNode vertexVariable = vertex;
-        while (vertex.jjtGetParent() != null && !Objects.equals(((SimpleNode) vertex.jjtGetParent()).toString(), "ModuleDeclarationStatement")) {
+        while (vertex.jjtGetParent() != null && !Objects.equals(vertex.toString(), "ModuleDeclarationStatement")) {
             vertex = (SimpleNode) vertex.jjtGetParent();
-            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement")) {
+            if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement") || Objects.equals(vertex.toString(), "Statement")) {
                 for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
                     for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
                         if (isVarDeclaration(LOG, vertexVariable, (SimpleNode) vertex.jjtGetChild(i).jjtGetChild(j))) {

@@ -1,9 +1,14 @@
+var t;
+
+t = 353;
+t += 3;
+
 module Main {
     var x = 12;
 
     module Zun {
         var y = 43;
-        x = 5;
+        Main.x = 5;
         proc foo() {}
     }
 
