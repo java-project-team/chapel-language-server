@@ -103,17 +103,19 @@ public class DefinitionProvider {
     }
 
     private SimpleNode dfs(SimpleNode root, SimpleNode vertexDeclaration, String name) {
-        for (int i = 0; i < root.jjtGetNumChildren(); i++) {
-            if (i + 1 < root.jjtGetNumChildren()
-                    && Objects.equals(root.jjtGetChild(i).toString(), "Identifier")
-                    && Objects.equals(((SimpleNode) root.jjtGetChild(i)).jjtGetFirstToken().image, name)
-                    && Objects.equals(root.jjtGetChild(i + 1).toString(), "AssignOperators")
-                    && Objects.equals(findDeclarationVariableNode(null, (SimpleNode) root.jjtGetChild(i)), vertexDeclaration)) {
-                return (SimpleNode) root.jjtGetParent();
-            }
-            var res = dfs((SimpleNode) root.jjtGetChild(i), vertexDeclaration, name);
-            if (res != null) {
-                return res;
+        if (!Objects.equals(root.toString(), "ModuleDeclarationStatement")) {
+            for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+                if (i + 1 < root.jjtGetNumChildren()
+                        && Objects.equals(root.jjtGetChild(i).toString(), "Identifier")
+                        && Objects.equals(((SimpleNode) root.jjtGetChild(i)).jjtGetFirstToken().image, name)
+                        && Objects.equals(root.jjtGetChild(i + 1).toString(), "AssignOperators")
+                        && Objects.equals(findDeclarationVariableNode(null, (SimpleNode) root.jjtGetChild(i)), vertexDeclaration)) {
+                    return (SimpleNode) root.jjtGetParent();
+                }
+                var res = dfs((SimpleNode) root.jjtGetChild(i), vertexDeclaration, name);
+                if (res != null) {
+                    return res;
+                }
             }
         }
         return null;
@@ -174,7 +176,7 @@ public class DefinitionProvider {
                 }
             }
         }
-        return ans;
+        return ans; // TODO if empty {return findProviderFunctionNodeAnotherFile()}
     }
 
     private static SimpleNode findDeclarationVariableNode(Logger LOG, SimpleNode vertex) {
@@ -183,7 +185,7 @@ public class DefinitionProvider {
         }
 
         SimpleNode vertexVariable = vertex;
-        while (vertex.jjtGetParent() != null) {
+        while (vertex.jjtGetParent() != null && !Objects.equals(((SimpleNode) vertex.jjtGetParent()).toString(), "ModuleDeclarationStatement")) {
             vertex = (SimpleNode) vertex.jjtGetParent();
             if (Objects.equals(vertex.toString(), "File") || Objects.equals(vertex.toString(), "Block") || Objects.equals(vertex.toString(), "BlockStatement")) {
                 for (int i = 0; i < vertex.jjtGetNumChildren(); i++) {
