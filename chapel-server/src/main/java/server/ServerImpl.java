@@ -6,21 +6,22 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.*;
 import parser.Parser;
+import parser.ParserConstants;
 import parser.SimpleNode;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 import requests.BasicProcessing;
 import requests.DefinitionProvider;
+import parser.Token;
 import requests.FileInformation;
 import server.semantic.tokens.ChapelModule;
+import server.semantic.tokens.ChapelProcedure;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -72,6 +73,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 
         var semanticTokensProvider = new SemanticTokensWithRegistrationOptions();
         semanticTokensProvider.setFull(true);
+        semanticTokensProvider.setRange(false);
         semanticTokensProvider.setLegend(
                 new SemanticTokensLegend(
                         List.of("class", "enum", "variable", "enumMember", "function", "method", "keyword"),
@@ -160,12 +162,103 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         }
 
         private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
+            LOG.info(dump(rootNode, ""));
             ChapelModule currentFile = createChapelModule(rootNode);
+            LOG.info(currentFile.toString());
+            // бфсом идти по модулям
+            // В модуле:
+            //   составить иерархию импортов
+            //   обойти бфсом исполняемые стейтменты для конкретного модуля
+
             return null;
         }
 
-        private ChapelModule createChapelModule(SimpleNode rootNode) {
+        private String dump(SimpleNode rootNode, String prefix) {
+            StringBuilder ans = new StringBuilder(prefix + rootNode.toString());
+            for (int i = 0; i < rootNode.jjtGetNumChildren(); ++i) {
+                SimpleNode child = (SimpleNode) rootNode.jjtGetChild(i);
+                if (child != null) {
+                    ans.append("\n").append(dump(child, prefix + "  "));
+                }
+            }
+            return ans.toString();
+        }
 
+        private ChapelModule createChapelModule(SimpleNode rootNode) {
+            var fileModule = new ChapelModule(rootNode, "");
+            var queue = new LinkedList<ChapelModule>();
+            queue.add(fileModule);
+            ChapelModule currentModule;
+            SimpleNode currentNode;
+            while (!queue.isEmpty()) {
+                currentModule = queue.poll();
+                currentNode = currentModule.getContentNode();
+                int numChildren = currentNode.jjtGetNumChildren();
+                for (int i = 0; i < numChildren; i++) {
+                    var statement = (SimpleNode) currentNode.jjtGetChild(i);
+                    assert statement != null;
+                    if (!statement.toString().equals("Statement")) {
+                        continue;
+                    }
+                    statement = (SimpleNode) statement.jjtGetChild(0);
+                    assert statement != null;
+//                    LOG.info(statement.toString());
+                    Token idToken;
+                    switch (statement.toString()) {
+                        case "ModuleDeclarationStatement" -> {
+                            idToken = getIdFromNode(statement);
+                            assert idToken != null;
+                            ChapelModule subModule =
+                                    new ChapelModule(
+                                            // take a block
+                                            (SimpleNode) statement.jjtGetChild(statement.jjtGetNumChildren() - 1),
+                                            idToken.image);
+                            currentModule.getModules().put(subModule.getName(), subModule);
+                            queue.add(subModule);
+                        }
+                        case "ProcedureDeclarationStatement" -> {
+                            if (!checkIsProcedure(currentNode)) {
+                                continue;
+                            }
+                            idToken = getIdFromNode(statement);
+                            assert idToken != null;
+                            ChapelProcedure procedure = new ChapelProcedure(idToken.image);
+                            currentModule.getProcedures().put(procedure.getName(), procedure);
+                        }
+                        case "VariableDeclarationStatement" -> {
+                            idToken = getIdFromNode(currentNode);
+                            assert idToken != null;
+                            currentModule.getVariables().add(idToken.image);
+                        }
+                        default -> {
+                        }
+                    }
+                }
+            }
+            return fileModule;
+        }
+
+        private boolean checkIsProcedure(SimpleNode currentNode) {
+            for (Token currentToken = currentNode.jjtGetFirstToken();
+                 !currentToken.equals(currentNode.jjtGetLastToken());
+                 currentToken = currentToken.next) {
+                if (currentToken.kind == ParserConstants.PROC || currentToken.kind == ParserConstants.OPERATOR) {
+                    return currentToken.kind == ParserConstants.PROC;
+                }
+            }
+            assert false;
+            return false;
+        }
+
+        private Token getIdFromNode(SimpleNode node) {
+            for (Token currentToken = node.jjtGetFirstToken();
+                 !currentToken.equals(node.jjtGetLastToken());
+                 currentToken
+                         = currentToken.next) {
+                if (currentToken.kind == ParserConstants.ID) {
+                    return currentToken;
+                }
+            }
             return null;
         }
 
