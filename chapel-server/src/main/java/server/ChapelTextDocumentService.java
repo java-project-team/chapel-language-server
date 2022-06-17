@@ -46,7 +46,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 a.getRange().getStart().setCharacter(a.getRange().getStart().getCharacter() - 1);
                 a.getRange().getEnd().setCharacter(a.getRange().getEnd().getCharacter() - 1);
             }).toList();
-            LOG.info(res.toString());
+//            LOG.info(res.toString());
             return CompletableFuture.completedFuture(Either.forLeft(res));
         } catch (Exception ignored) {
             return null;
@@ -70,7 +70,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 a.getRange().getStart().setCharacter(a.getRange().getStart().getCharacter() - 1);
                 a.getRange().getEnd().setCharacter(a.getRange().getEnd().getCharacter() - 1);
             }).toList();
-            LOG.info(res.toString());
+//            LOG.info(res.toString());
             return CompletableFuture.completedFuture(Either.forLeft(res));
         } catch (Exception ignored) {
             return null;
@@ -94,15 +94,14 @@ public class ChapelTextDocumentService implements TextDocumentService {
     void importHierarchy(ChapelModule rootModule) {
         class DFSNode {
             static class Edge {
-                DFSNode dest;
-                boolean isPublic;
+                final DFSNode dest;
+                final boolean isPublic;
 
                 public Edge(DFSNode dest, boolean isPublic) {
                     this.dest = dest;
                     this.isPublic = isPublic;
                 }
             }
-            int successEdges = 0;
             int index = 0;
             public final ChapelModule module;
             public ArrayList<Edge> to = new ArrayList<>();
@@ -145,15 +144,15 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 continue;
             }
             for (
-                    var useStatement = dfsNode.module.useStatements.get(dfsNode.successEdges);
-                    dfsNode.successEdges < dfsNode.module.useStatements.size();
-                    dfsNode.successEdges++) {
+                    int i = 0;
+                    i < dfsNode.module.useStatements.size();
+                    i++) {
+                var useStatement = dfsNode.module.useStatements.get(i);
                 ArrayList<ChapelModule> modulesToUseList =
                         findModuleByUsePath(useStatement, dfsNode.module, rootModule);
                 if (modulesToUseList == null) {
-                    break;
+                    continue;
                 }
-                dfsNode.successEdges++;
                 for (var moduleToUse : modulesToUseList) {
                     var fromNode = mapFromModuleToNode.get(moduleToUse);
                     if (useStatement.isPublic) {
@@ -167,7 +166,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 }
             }
         }
-//            LOG.info(String.valueOf(DFSNode.allDFSNodes.size()));
         ArrayList<Boolean> isVisited = new ArrayList<>();
         for (int i = 0; i < DFSNode.allDFSNodes.size(); i++) {
             isVisited.add(false);
@@ -176,9 +174,9 @@ public class ChapelTextDocumentService implements TextDocumentService {
         for (var dfsNode : DFSNode.allDFSNodes) {
             DFSNode.topSort(isVisited, topSortOrder, dfsNode);
         }
-        /*for (var x : topSortOrder) {
+        for (var x : topSortOrder) {
             LOG.info(x.module.name);
-        }*/
+        }
     }
 
     private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
@@ -222,38 +220,11 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
-        //LOG.info(dump(rootNode, ""));
+        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
 
-//            var ans = getTokensFromChapelStatement(fileModule);
         //LOG.info(fileModule.toString());
         importHierarchy(fileModule);
-//            class SemanticTokenFinder {
-//                final HashMap<String, ChapelProcedure> availableProcedures = new HashMap<>();
-//                SemanticTokens generateTokens(ChapelStatement currentChapelStatement) {
-//                    for (ChapelStatement subStatement : currentChapelStatement.subStatements) {
-//                        if (subStatement.rootNode.getId() != JJTUSESTATEMENT) {
-//                            continue;
-//                        }
-//
-//                    }
-//                    return null;
-//                }
-//
-//                void resolveUseDependencies() {
-//
-//                }
-//             }
-
-//            var queue = new LinkedList<ChapelModule>();
-//            queue.add(fileModule);
-//            while (!queue.isEmpty()) {
-//                var currentModule = queue.pollFirst();
-//                queue.addAll(currentModule.modules.values());
-//
-//                SemanticTokens tokensFromModule = getTokensFromModule(currentModule);
-//            }
-
 
         // бфсом идти по модулям
         // В модуле:
@@ -261,13 +232,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
         //   обойти бфсом исполняемые стейтменты для конкретного модуля
 
         return null;
-    }
-
-    private void getTokensFromChapelStatement(ChapelStatement currentModule) {
-        HashSet<ChapelStatement> visited = new HashSet<>();
-        Runnable x = () -> {
-
-        };
     }
 
     private String dump(SimpleNode rootNode, String prefix) {
@@ -288,8 +252,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ChapelStatement currentChapelStatement;
         while (!queue.isEmpty()) {
             currentChapelStatement = queue.poll();
-//                LOG.info(currentChapelStatement.rootNode.toString());
-//                LOG.info(currentChapelStatement.contentNodes.toString());
             for (var currentContentNode : currentChapelStatement.contentNodes) {
                 assert currentContentNode != null;
                 if (currentContentNode.getId() != JJTSTATEMENT &&
