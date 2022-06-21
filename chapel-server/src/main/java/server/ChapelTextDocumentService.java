@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import parser.Parser;
+import parser.ParserTreeConstants;
 import parser.ParserConstants;
 import parser.SimpleNode;
 import parser.Token;
@@ -15,6 +16,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -263,16 +265,42 @@ public class ChapelTextDocumentService implements TextDocumentService {
 //        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
         importHierarchy(fileModule);
+        ArrayList<Integer> resTokens = new ArrayList<>();
+
+
 
 //        LOG.info(fileModule.toString());
-//        var queue = new LinkedList<ChapelStatement>();
-//        queue.add(fileModule);
-//        ChapelStatement currentChapelStatement;
-//        while (!queue.isEmpty()) {
-//            currentChapelStatement = queue.poll();
-//            LOG.info(currentChapelStatement.usedModules.toString());
-//            queue.addAll(currentChapelStatement.subModules.values());
-//        }
+        var queue = new LinkedList<ChapelStatement>();
+        queue.add(fileModule);
+        ChapelStatement currentChapelStatement = null;
+
+        while (!queue.isEmpty()) {
+            currentChapelStatement = queue.poll();
+
+            switch (currentChapelStatement.rootNode.getId()) {
+                case JJTEXPRESSION -> {
+                    var firstToken = currentChapelStatement.rootNode.jjtGetFirstToken();
+                    var lastToken = currentChapelStatement.rootNode.jjtGetLastToken();
+
+                    var currentToken = firstToken;
+                    ArrayList<Token> idMemberTokens = new ArrayList<>();
+                    while (!currentToken.equals(lastToken)) {
+                        if (currentToken.kind == ParserConstants.ID) {
+                            idMemberTokens.add(currentToken);
+                            if (currentToken.next.kind == ParserConstants.LPARENTHESIS) {
+                                // todo добавить токен об определении функция ли это или метод
+                            }
+                        }
+                        currentToken = currentToken.next;
+                    }
+                }
+                default -> {
+
+                }
+            }
+
+            queue.addAll(currentChapelStatement.subStatements);
+        }
 
         return null;
     }
