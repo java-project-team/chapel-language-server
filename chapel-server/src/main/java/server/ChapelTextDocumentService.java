@@ -112,12 +112,25 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 index = allDFSNodes.size();
                 allDFSNodes.add(this);
             }
-
-            static void topSort(ArrayList<Boolean> visited, LinkedList<DFSNode> order, DFSNode v) {
-                if (visited.get(v.index)) {
+            static void reachDFS(int[] colors, Integer color, DFSNode v) {
+                if (colors[v.index] != 0) {
                     return;
                 }
-                visited.set(v.index, true);
+                Logger.getAnonymousLogger().info(v.module.name);
+                colors[v.index] = color;
+                for (var from : v.from) {
+                    if (!from.isPublic) {
+                        continue;
+                    }
+                    reachDFS(colors, color, from.dest);
+                }
+            }
+
+            static void topSort(boolean[] visited, LinkedList<DFSNode> order, DFSNode v) {
+                if (visited[v.index]) {
+                    return;
+                }
+                visited[v.index] = true;
                 for (var to : v.to) {
                     if (!to.isPublic) {
                         continue;
@@ -148,17 +161,16 @@ public class ChapelTextDocumentService implements TextDocumentService {
                     i < dfsNode.module.useStatements.size();
                     i++) {
                 var useStatement = dfsNode.module.useStatements.get(i);
-                ArrayList<ChapelModule> modulesToUseList =
+                ArrayList<Map.Entry<String, ChapelModule>> modulesToUseList =
                         findModuleByUsePath(useStatement, dfsNode.module, rootModule);
                 if (modulesToUseList == null) {
                     continue;
                 }
                 for (var moduleToUse : modulesToUseList) {
-                    var fromNode = mapFromModuleToNode.get(moduleToUse);
-                    if (useStatement.isPublic) {
-                        dfsNode.module.usedModules.putAll(fromNode.module.subModules);
-                    }
+                    var fromNode = mapFromModuleToNode.get(moduleToUse.getValue());
                     assert fromNode != null;
+                    dfsNode.module.usedModules.putAll(fromNode.module.subModules);
+                    dfsNode.module.usedModules.put(moduleToUse.getKey(), moduleToUse.getValue());
                     DFSNode.Edge from = new DFSNode.Edge(fromNode, useStatement.isPublic);
                     DFSNode.Edge to = new DFSNode.Edge(dfsNode, useStatement.isPublic);
                     dfsNode.from.add(from);
@@ -166,23 +178,51 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 }
             }
         }
-        ArrayList<Boolean> isVisited = new ArrayList<>();
-        for (int i = 0; i < DFSNode.allDFSNodes.size(); i++) {
-            isVisited.add(false);
-        }
+        boolean[] isVisited = new boolean[DFSNode.allDFSNodes.size()];
+
         LinkedList<DFSNode> topSortOrder = new LinkedList<>();
         for (var dfsNode : DFSNode.allDFSNodes) {
             DFSNode.topSort(isVisited, topSortOrder, dfsNode);
         }
-        for (var x : topSortOrder) {
-            LOG.info(x.module.name);
+
+        int[] color = new int[DFSNode.allDFSNodes.size()];
+        int cc = 0;
+        for (var dfsNode : topSortOrder) {
+            cc++;
+            LOG.info("color: " + cc);
+            DFSNode.reachDFS(color, cc, dfsNode);
+        }
+
+        ArrayList<ArrayList<DFSNode>> colorsGroups = new ArrayList<>();
+        for (int i = 0; i < cc; i++) {
+            colorsGroups.add(new ArrayList<>());
+        }
+
+        for (int i = 0; i < DFSNode.allDFSNodes.size(); i++) {
+            var dfsNode = DFSNode.allDFSNodes.get(i);
+            int c = color[i];
+            colorsGroups.get(c - 1).add(dfsNode);
+        }
+        cc = 0;
+        for (var colorGroup : colorsGroups) {
+            HashMap<String, ChapelModule> importGroup = new HashMap<>();
+            for (var node : colorGroup) {
+                importGroup.putAll(node.module.subModules);
+                importGroup.putAll(node.module.usedModules);
+            }
+            cc++;
+            LOG.info(String.valueOf(cc));
+            LOG.info(importGroup.toString());
+            for (var node : colorGroup) {
+                node.module.usedModules.putAll(importGroup);
+            }
         }
     }
 
-    private ArrayList<ChapelModule> findModuleByUsePath(ChapelUseStatement useStatement,
-                                                        ChapelModule useOwnerModule,
-                                                        ChapelModule rootModule) {
-        ArrayList<ChapelModule> ans = new ArrayList<>();
+    private ArrayList<Map.Entry<String, ChapelModule>> findModuleByUsePath(ChapelUseStatement useStatement,
+                                                                           ChapelModule useOwnerModule,
+                                                                           ChapelModule rootModule) {
+        ArrayList<Map.Entry<String, ChapelModule>> ans = new ArrayList<>();
         for (var useModuleDec : useStatement.useModules) {
             Function<ChapelModule, ChapelModule> tryToFindModule = (scopeModule) -> {
                 for (var moduleName : useModuleDec.modules) {
@@ -213,23 +253,26 @@ public class ChapelTextDocumentService implements TextDocumentService {
                     return null;
                 }
             }
-            ans.add(target);
+            ans.add(new AbstractMap.SimpleEntry<>(useModuleDec.name, target));
         }
         return ans;
     }
 
     private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
-        LOG.info(dump(rootNode, ""));
+//        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
-
-        //LOG.info(fileModule.toString());
         importHierarchy(fileModule);
 
-        // бфсом идти по модулям
-        // В модуле:
-        //   составить иерархию импортов
-        //   обойти бфсом исполняемые стейтменты для конкретного модуля
+//        LOG.info(fileModule.toString());
+//        var queue = new LinkedList<ChapelStatement>();
+//        queue.add(fileModule);
+//        ChapelStatement currentChapelStatement;
+//        while (!queue.isEmpty()) {
+//            currentChapelStatement = queue.poll();
+//            LOG.info(currentChapelStatement.usedModules.toString());
+//            queue.addAll(currentChapelStatement.subModules.values());
+//        }
 
         return null;
     }
