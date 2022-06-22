@@ -4,7 +4,6 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import parser.Parser;
-import parser.ParserTreeConstants;
 import parser.ParserConstants;
 import parser.SimpleNode;
 import parser.Token;
@@ -12,11 +11,11 @@ import requests.DefinitionProvider;
 import server.semantic.tokens.*;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -104,16 +103,19 @@ public class ChapelTextDocumentService implements TextDocumentService {
                     this.isPublic = isPublic;
                 }
             }
+
             int index = 0;
             public final ChapelModule module;
             public ArrayList<Edge> to = new ArrayList<>();
             public ArrayList<Edge> from = new ArrayList<>();
             static final ArrayList<DFSNode> allDFSNodes = new ArrayList<>();
+
             DFSNode(ChapelModule module) {
                 this.module = module;
                 index = allDFSNodes.size();
                 allDFSNodes.add(this);
             }
+
             static void reachDFS(int[] colors, Integer color, DFSNode v) {
                 if (colors[v.index] != 0) {
                     return;
@@ -213,11 +215,32 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 importGroup.putAll(node.module.usedModules);
             }
             cc++;
-            LOG.info(String.valueOf(cc));
-            LOG.info(importGroup.toString());
+//            LOG.info(String.valueOf(cc));
+//            LOG.info(importGroup.toString());
             for (var node : colorGroup) {
                 node.module.usedModules.putAll(importGroup);
             }
+        }
+        LinkedList<ChapelStatement> statementsQueue = new LinkedList<>();
+        statementsQueue.add(rootModule);
+        while (!statementsQueue.isEmpty()) {
+            var curStatement = statementsQueue.pollFirst();
+            statementsQueue.addAll(curStatement.subStatements);
+            statementsQueue.addAll(curStatement.procedures.values());
+            statementsQueue.addAll(curStatement.subModules.values());
+            for (var useStatement : curStatement.useStatements) {
+                ArrayList<Map.Entry<String, ChapelModule>> modulesToUseList =
+                        findModuleByUsePath(useStatement, useStatement.ownerModule, rootModule);
+                if (modulesToUseList == null) {
+                    continue;
+                }
+                for (var entry : modulesToUseList) {
+                    curStatement.usedModules.putAll(entry.getValue().subModules);
+                    curStatement.usedModules.putAll(entry.getValue().usedModules);
+                    curStatement.usedModules.put(entry.getKey(), entry.getValue());
+                }
+            }
+
         }
     }
 
@@ -238,7 +261,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                     if (moduleName.equals("this")) {
                         moduleToUse = scopeModule;
                     } else if (moduleName.equals("super")) {
-                        moduleToUse = (ChapelModule) scopeModule.parentStatement;
+                        moduleToUse = scopeModule.ownerModule;
                     }
                     scopeModule = moduleToUse;
                 }
@@ -265,14 +288,14 @@ public class ChapelTextDocumentService implements TextDocumentService {
 //        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
         importHierarchy(fileModule);
+
+
         ArrayList<Integer> resTokens = new ArrayList<>();
 
 
-
-//        LOG.info(fileModule.toString());
         var queue = new LinkedList<ChapelStatement>();
         queue.add(fileModule);
-        ChapelStatement currentChapelStatement = null;
+        ChapelStatement currentChapelStatement;
 
         while (!queue.isEmpty()) {
             currentChapelStatement = queue.poll();
@@ -288,6 +311,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         if (currentToken.kind == ParserConstants.ID) {
                             idMemberTokens.add(currentToken);
                             if (currentToken.next.kind == ParserConstants.LPARENTHESIS) {
+                                resTokens.addAll(parseMembersCall(idMemberTokens, currentChapelStatement));
                                 // todo добавить токен об определении функция ли это или метод
                             }
                         }
@@ -303,6 +327,41 @@ public class ChapelTextDocumentService implements TextDocumentService {
         }
 
         return null;
+    }
+
+    private ArrayList<Integer> parseMembersCall(ArrayList<Token> idMemberTokens,
+                                                ChapelStatement currentChapelExpressionStatement) {
+        assert !idMemberTokens.isEmpty();
+        var callToken = idMemberTokens.get(idMemberTokens.size() - 1);
+        ChapelModule currentModule = currentChapelExpressionStatement.ownerModule;
+        // todo add parent statements
+//        if (isIdListCorrect(idMemberTokens, currentModule) || isIdListCorrect(idMemberTokens, cur)) {
+//
+//        }
+    }
+
+    private boolean isIdListCorrect(ArrayList<Token> idList, ChapelStatement startStatement) {
+        var it = startStatement;
+        for (int i = 0; i < idList.size() - 1; i++) {
+            var idToken = idList.get(i);
+            var tokenImage = idToken.image;
+            if (it.subModules.containsKey(tokenImage)) {
+                it = it.subModules.get(tokenImage);
+            } else if (it.usedModules.containsKey(tokenImage)) {
+                it = it.usedModules.get(tokenImage);
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private ArrayList<Integer> createTokenDescription(int line,
+                                                      int startChar,
+                                                      int length,
+                                                      int tokenType,
+                                                      int tokenModifiers) {
+
     }
 
     private String dump(SimpleNode rootNode, String prefix) {
@@ -341,7 +400,8 @@ public class ChapelTextDocumentService implements TextDocumentService {
                                 new ChapelModule(
                                         currentContentNode,
                                         idToken.image);
-                        subModule.parentStatement = currentChapelStatement;
+                        determineParentModule(subModule, currentChapelStatement);
+
                         currentChapelStatement.subModules.put(subModule.name, subModule);
                         queue.add(subModule);
                     }
@@ -353,16 +413,16 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         assert idToken != null;
                         ChapelProcedure procedure = new ChapelProcedure(currentContentNode, idToken.image);
                         queue.add(procedure);
-                        procedure.parentStatement = currentChapelStatement.parentStatement;
+                        determineParentModule(procedure, currentChapelStatement);
                         currentChapelStatement.procedures.put(procedure.getName(), procedure);
                     }
                     case JJTUSESTATEMENT -> {
                         var useStatement = new ChapelUseStatement(currentContentNode);
-                        useStatement.parentStatement = currentChapelStatement;
+                        determineParentModule(useStatement, currentChapelStatement);
                         currentChapelStatement.useStatements.add(useStatement);
                     }
                     case JJTIMPORTSTATEMENT -> {
-
+                        // todo
                     }
                     case JJTVARIABLEDECLARATIONSTATEMENT -> {
                         idToken = getIdFromNode(currentContentNode);
@@ -370,17 +430,27 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         currentChapelStatement.variables.add(idToken.image);
                     }
                     case JJTCLASSDECLARATIONSTATEMENT -> {
+                        //todo
                     }
                     default -> {
-                        ChapelStatement chapelStatement = new ChapelUnnamedStatement(currentContentNode);
-                        chapelStatement.parentStatement = currentChapelStatement.parentStatement;
-                        currentChapelStatement.subStatements.add(chapelStatement);
-                        queue.add(chapelStatement);
+                        ChapelStatement childChapelStatement = new ChapelUnnamedStatement(currentContentNode);
+                        childChapelStatement.ownerModule = currentChapelStatement.ownerModule;
+                        determineParentModule(childChapelStatement, currentChapelStatement);
+                        currentChapelStatement.subStatements.add(childChapelStatement);
+                        queue.add(childChapelStatement);
                     }
                 }
             }
         }
         return fileModule;
+    }
+
+    private void determineParentModule(ChapelStatement child, ChapelStatement current) {
+        if (current.rootNode.getId() == JJTMODULEDECLARATIONSTATEMENT) {
+            child.ownerModule = (ChapelModule) current;
+        } else {
+            child.ownerModule = current.ownerModule;
+        }
     }
 
     private boolean checkIsProcedure(SimpleNode currentNode) {

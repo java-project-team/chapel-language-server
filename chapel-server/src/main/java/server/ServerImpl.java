@@ -78,7 +78,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         semanticTokensProvider.setRange(false);
         semanticTokensProvider.setLegend(
                 new SemanticTokensLegend(
-                        List.of("class", "enum", "variable", "enumMember", "function", "method", "keyword"),
+                        List.of("namespace", "class", "enum", "variable", "enumMember", "function", "method", "keyword"),
                         List.of()));
         capabilities.setSemanticTokensProvider(semanticTokensProvider);
 

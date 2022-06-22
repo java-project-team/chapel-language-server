@@ -26,7 +26,7 @@ public class ChapelStatement {
     public ArrayList<SimpleNode> contentNodes = new ArrayList<>();
     public ArrayList<ChapelUseStatement> useStatements = new ArrayList<>();
     public SimpleNode rootNode;
-    public ChapelStatement parentStatement = null;
+    public ChapelModule ownerModule = null;
 
     public final HashMap<String, ChapelProcedure> procedures = new HashMap<>();
     public final ArrayList<ChapelStatement> subStatements = new ArrayList<>();
