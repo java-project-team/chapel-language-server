@@ -29,9 +29,24 @@ public class DefinitionProvider {
         //SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
         //var vertexWithModule = new Pair<>(var, modules);
         var trueModules = Vertex.findModule(LOG, var).getValue();
-        trueModules.addAll(modules);
+
+        boolean isLocalName = false;
+        for (int i = 0; i < trueModules.size() && i < modules.size(); i++) {
+            if (!Objects.equals(trueModules.get(i), modules.get(i))) {
+                isLocalName = true;
+                break;
+            }
+        }
+
+        if (isLocalName) {
+            trueModules.addAll(modules);
+        }
+        else {
+            trueModules = (trueModules.size() > modules.size() ? modules : trueModules);
+        }
+
         modules = trueModules;
-        //LOG.info("modules: " + modules.toString());
+        LOG.info("modules: " + modules.toString());
         var module = filesInformation.getFileInformation(uri);
         for (var i = 0; i < modules.size(); i++) {
             module = module.getUseModules().get(modules.get(i));
@@ -120,7 +135,7 @@ public class DefinitionProvider {
 
         if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
             return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION, findDeclarationFunctionNode(LOG, uri, vertex.jjtGetFirstToken().image), vertex.jjtGetFirstToken().image);
-        } else { // TODO здесь нужно проверить, не тип ли это, или еще круче, найти определение типа!!!   !_! -_- -_- -_- -_- ~_~ ????????::::::!!!!!!!!????????????;;;; ((
+        } else {
             List<Pair<String, SimpleNode>> ans = new ArrayList<>();
             var res = findDeclarationVariableNode(LOG, vertex);
             if (res != null) {
@@ -133,6 +148,9 @@ public class DefinitionProvider {
     public List<Location> findDefinition(Logger LOG, String uri, Position position) {
         var ans = findDeclarationNode(LOG, uri, position);
         if (ans.listDeclaration.isEmpty()) {
+            if (ans.type == ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION) {
+                return findDeclaration(LOG, uri, position);
+            }
             return new ArrayList<>();
         }
         if (ans.type == ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION) {
@@ -234,7 +252,7 @@ public class DefinitionProvider {
                 }
             }
         }
-        return ans; // TODO if empty {return findProviderFunctionNodeAnotherFile()}
+        return ans;
     }
 
     private static SimpleNode findDeclarationVariableNode(Logger LOG, SimpleNode vertex) {

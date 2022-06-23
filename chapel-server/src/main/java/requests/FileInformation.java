@@ -2,6 +2,7 @@ package requests;
 
 import parser.Parser;
 import parser.SimpleNode;
+import server.semantic.tokens.ChapelUseStatement;
 
 import java.util.*;
 
@@ -11,6 +12,7 @@ public class FileInformation {
     private boolean isChanged;
     private FileInformation parentModule;
     private Map<String, FileInformation> useModules;
+    private ChapelUseStatement useStatement;
     private List<DefinitionVariable> variables;
     private List<DefinitionFunction> functions;
     private SimpleNode root;
@@ -24,6 +26,7 @@ public class FileInformation {
         parentModule = null;
         useModules = new HashMap<>();
         root = null;
+        useStatement = null;
         update(false);
     }
 
@@ -36,6 +39,7 @@ public class FileInformation {
         this.parentModule = parentModule;
         useModules = new HashMap<>();
         this.root = root;
+        useStatement = null;
         update(true);
     }
 
@@ -63,6 +67,8 @@ public class FileInformation {
         return update(false);
     }
 
+    public FileInformation getParentModule() { return parentModule;}
+
     private FileInformation update(boolean isParse) {
         if (!isChanged) {
             return this;
@@ -74,6 +80,9 @@ public class FileInformation {
 
         if (!isParse) {
             root = Parser.parse(path);
+        }
+        if (root != null) {
+            useStatement = new ChapelUseStatement(root);
         }
         if (root != null && Objects.equals(root.toString(), "ModuleDeclarationStatement")) {
             nameModule = root.jjtGetFirstToken().next.image;
