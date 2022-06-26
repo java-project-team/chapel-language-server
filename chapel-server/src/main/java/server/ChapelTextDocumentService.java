@@ -285,11 +285,12 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
-//        LOG.info(dump(rootNode, ""));
+        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
         importHierarchy(fileModule);
+//        LOG.info(fileModule.toString());
 
-        ArrayList<Integer> resTokens = new ArrayList<>();
+        ArrayList<SemanticToken> resTokens = new ArrayList<>();
 
         var queue = new LinkedList<ChapelModule>();
         queue.add(fileModule);
@@ -300,27 +301,41 @@ public class ChapelTextDocumentService implements TextDocumentService {
             inModule(currentModule, resTokens);
             queue.addAll(currentModule.subModules.values());
         }
-        LOG.info("abs = " + resTokens.toString());
-        ArrayList<Integer> deltaResTokens = new ArrayList<>(resTokens);
-        for (int i = 0; i < resTokens.size(); i += 5) {
-            if (i != 0 && resTokens.get(i).equals(resTokens.get(i - 5))) {
-                deltaResTokens.set(i, 0);
-                deltaResTokens.set(i + 1, resTokens.get(i + 1) - resTokens.get(i - 4));
-            }
+        resTokens.sort((s1, s2) -> s1.line - s2.line == 0 ? s1.startChar - s2.startChar : s1.line - s2.line);
+        var f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
+        LOG.info("abs = " + f);
+        for (int i = resTokens.size() - 1; i > 0; i--) {
+//            if (i != 0) {
+                var curSemanticToken = resTokens.get(i);
+                var prevSemanticToken = resTokens.get(i - 1);
+                curSemanticToken.line -= prevSemanticToken.line;
+                if (curSemanticToken.line == 0) {
+                    curSemanticToken.startChar -= prevSemanticToken.startChar;
+                }
+//            }
         }
-        LOG.info("delta = " + deltaResTokens.toString());
-        return new SemanticTokens(resTokens);
+        f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
+        LOG.info("delta = " + f);
+        return new SemanticTokens(f);
     }
 
-    private void inModule(ChapelModule currentModule, ArrayList<Integer> resTokens) {
+    private void inModule(ChapelModule currentModule, ArrayList<SemanticToken> resTokens) {
         var currentReachableModules = new HashMap<String, ChapelModule>();
         currentReachableModules.putAll(currentModule.usedModules);
         currentReachableModules.putAll(currentModule.subModules);
 
-        goThrough(currentModule, currentReachableModules, resTokens);
+        var currentReachableProcedures = new HashMap<>(currentModule.procedures);
+        for (var module : currentReachableModules.values()) {
+            currentReachableProcedures.putAll(module.procedures);
+        }
+
+        goThrough(currentModule, currentReachableModules, currentReachableProcedures, resTokens);
     }
 
-    private void goThrough(ChapelStatement currentStatement, HashMap<String, ChapelModule> reachableModules, ArrayList<Integer> resTokens) {
+    private void goThrough(ChapelStatement currentStatement,
+                           HashMap<String, ChapelModule> reachableModules,
+                           HashMap<String, ChapelProcedure> reachableProcedures,
+                           ArrayList<SemanticToken> resTokens) {
         ArrayList<Map.Entry<String, ChapelModule>> addedModules = new ArrayList<>();
         for (var entry : currentStatement.usedModules.entrySet()) {
             if (!reachableModules.containsKey(entry.getKey())) {
@@ -328,6 +343,21 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 reachableModules.put(entry.getKey(), entry.getValue());
             }
         }
+
+//        LOG.info(reachableModules.keySet().toString());
+        ArrayList<Map.Entry<String, ChapelProcedure>> addedProcedures = new ArrayList<>();
+        if (currentStatement.rootNode.getId() != JJTBLOCKSTATEMENT
+                || !isBlockInClass(currentStatement.rootNode)
+        ) {
+            for (var entry : currentStatement.procedures.entrySet()) {
+                if (!reachableProcedures.containsKey(entry.getKey())) {
+//                    LOG.info("added proc: " + entry.getKey());
+                    addedProcedures.add(entry);
+                    reachableProcedures.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
         for (var expr : currentStatement.expressions) {
             var firstToken = expr.rootNode.jjtGetFirstToken();
             var lastToken = expr.rootNode.jjtGetLastToken().next;
@@ -340,59 +370,89 @@ public class ChapelTextDocumentService implements TextDocumentService {
                     idMemberTokens.add(currentToken);
 //                    LOG.info(currentToken.next.image);
                     if (currentToken.next.kind == ParserConstants.LPARENTHESIS) {
-                        resTokens.addAll(parseMembers(idMemberTokens, currentStatement, reachableModules, true));
+                        resTokens.addAll(
+                                parseMembers(
+                                        idMemberTokens,
+                                        currentStatement,
+                                        reachableModules,
+                                        reachableProcedures,
+                                        true));
                     } else if (currentToken.next.kind != ParserConstants.DOT) {
-                        resTokens.addAll(parseMembers(idMemberTokens, currentStatement, reachableModules, false));
+                        resTokens.addAll(
+                                parseMembers(
+                                        idMemberTokens,
+                                        currentStatement,
+                                        reachableModules,
+                                        reachableProcedures,
+                                        false));
                     }
                 }
                 currentToken = currentToken.next;
             }
         }
         for (ChapelStatement subStatement : currentStatement.subStatements) {
-            goThrough(subStatement, reachableModules, resTokens);
+            goThrough(subStatement, reachableModules, reachableProcedures, resTokens);
         }
         for (ChapelStatement subStatement : currentStatement.procedures.values()) {
-            goThrough(subStatement, reachableModules, resTokens);
+            goThrough(subStatement, reachableModules, reachableProcedures, resTokens);
         }
 
         for (var entry : addedModules) {
             reachableModules.remove(entry.getKey());
         }
+        for (var entry : addedProcedures) {
+            reachableProcedures.remove(entry.getKey());
+        }
     }
 
-    private ArrayList<Integer> parseMembers(ArrayList<Token> idMemberTokens,
+    private boolean isBlockInClass(SimpleNode rootNode) {
+        return ((SimpleNode) rootNode.jjtGetParent().jjtGetParent()).getId() == JJTCLASSDECLARATIONSTATEMENT;
+    }
+
+    private ArrayList<SemanticToken> parseMembers(ArrayList<Token> idMemberTokens,
                                             ChapelStatement currentChapelExpressionStatement,
                                             HashMap<String, ChapelModule> reachableModules,
+                                            HashMap<String, ChapelProcedure> reachableChapelProcedures,
                                             boolean isCallable) {
         assert !idMemberTokens.isEmpty();
-        var callToken = idMemberTokens.get(idMemberTokens.size() - 1);
-        BiFunction<Token, Integer, List<Integer>> createSemanticTokenFromId = (id, tokenNum) -> {
-            return Arrays.asList(
-                    id.beginLine,
-                    id.beginColumn,
-                    id.endColumn + 1 - id.beginColumn,
+        var lastToken = idMemberTokens.get(idMemberTokens.size() - 1);
+        var res = new ArrayList<SemanticToken>();
+
+        BiFunction<Token, Integer, SemanticToken> createSemanticTokenFromId = (id, tokenNum) -> {
+            return new SemanticToken(
+                    id.beginLine - 1,
+                    id.beginColumn - 1,
+                    id.endColumn - (id.beginColumn - 1),
                     tokenNum,
                     0
             );
         };
-        var res = new ArrayList<Integer>();
+        if (idMemberTokens.size() == 1 && isCallable) {
+            if (reachableChapelProcedures.containsKey(lastToken.image)) {
+                res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.FUNCTION_TOKEN_INDEX));
+            } else {
+                res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.METHOD_TOKEN_INDEX));
+            }
+            return res;
+        }
         int modulesCallLength = idListCorrectModuleCallLength(idMemberTokens, reachableModules);
+        LOG.info(String.valueOf(modulesCallLength));
         for (int i = 0; i < modulesCallLength; i++) {
             var id = idMemberTokens.get(i);
-            res.addAll(createSemanticTokenFromId.apply(id, SemanticTokensConstants.NAMESPACE_TOKEN_INDEX));
+            res.add(createSemanticTokenFromId.apply(id, SemanticTokensConstants.NAMESPACE_TOKEN_INDEX));
         }
         if (modulesCallLength == idMemberTokens.size() - 1 && isCallable) {
-            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.FUNCTION_TOKEN_INDEX));
+            res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.FUNCTION_TOKEN_INDEX));
             return res;
         }
         for (int i = modulesCallLength; i < idMemberTokens.size() - 1; i++) {
             var id = idMemberTokens.get(i);
-            res.addAll(createSemanticTokenFromId.apply(id, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
+            res.add(createSemanticTokenFromId.apply(id, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
         }
         if (isCallable) {
-            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.METHOD_TOKEN_INDEX));
+            res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.METHOD_TOKEN_INDEX));
         } else {
-            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
+            res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
         }
         return res;
     }
@@ -400,9 +460,15 @@ public class ChapelTextDocumentService implements TextDocumentService {
     private int idListCorrectModuleCallLength(ArrayList<Token> idList, HashMap<String, ChapelModule> reachableModules) {
         var it = reachableModules.get(idList.get(0).image);
         int i = 0;
+        if (it == null) {
+            return i;
+        }
+        i++;
+//        LOG.info(it.name);
         for (; i < idList.size() - 1; i++) {
             var idToken = idList.get(i);
             var tokenImage = idToken.image;
+            LOG.info(tokenImage);
             if (it.subModules.containsKey(tokenImage)) {
                 it = it.subModules.get(tokenImage);
             } else if (it.usedModules.containsKey(tokenImage)) {
@@ -481,9 +547,9 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         currentChapelStatement.expressions.addAll(expressionsFromVarDeclaration(currentContentNode));
 
                     }
-                    case JJTCLASSDECLARATIONSTATEMENT -> {
-                        //todo
-                    }
+//                    case JJTCLASSDECLARATIONSTATEMENT -> {
+//                        //todo
+//                    }
                     default -> {
                         ChapelStatement childChapelStatement = new ChapelUnnamedStatement(currentContentNode);
                         childChapelStatement.ownerModule = currentChapelStatement.ownerModule;

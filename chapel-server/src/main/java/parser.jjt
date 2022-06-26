@@ -630,7 +630,7 @@ void ThisIntent() :
     |<CONST> (<REF>)?
 }
 
-void TypeDeclarationStatement() :
+void TypeDeclarationStatement() #void:
 {}
 {
     EnumDeclarationStatement()

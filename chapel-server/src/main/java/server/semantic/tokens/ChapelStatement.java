@@ -51,10 +51,12 @@ public class ChapelStatement {
         return "\n{\n" + String.join(
                 ", ",
                 rootNode == null ? "null" : rootNode.toString(),
-                "Modules = " + subModules,
-                "Uses = " + useStatements,
-                "Procedures = " + procedures,
-                "Variables = " + variables,
-                "SubStatements = " + subStatements) + "\n}\n" ;
+//                "Modules = " + subModules,
+//                "Uses = " + useStatements,
+                "used modules" + usedModules.keySet(),
+//                "Procedures = " + procedures,
+//                "Variables = " + variables,
+                "SubStatements = " + subStatements
+        ) + "\n}\n" ;
     }
 }
