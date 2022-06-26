@@ -33,7 +33,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
-//        LOG.info("definition");
+        LOG.info("definition");
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
@@ -57,7 +57,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
     // у меня в стандартных не было, добавляла сама (Ctrl + Shift + A)
     @Override
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> declaration(DeclarationParams params) {
-//        LOG.info("declaration");
+        LOG.info("declaration");
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
@@ -80,7 +80,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
-//        LOG.info("semanticTokensFull");
+        LOG.info("semanticTokensFull");
         try {
             var doc = new File(new URI(params.getTextDocument().getUri()));
             var rootNode = Parser.parse(doc.getAbsolutePath());
@@ -535,12 +535,12 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
-//        LOG.info("didOpen");
+        LOG.info("didOpen");
     }
 
     @Override
     public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
-//        LOG.info("codeLens");
+        LOG.info("codeLens");
         List<CodeLens> list = new ArrayList<>(getVarTypeLensesInDocument(params.getTextDocument()));
         return CompletableFuture.completedFuture(list);
     }
