@@ -9,6 +9,7 @@ import java.util.*;
 public class FileInformation {
     private final String path;
     private String nameModule;
+    boolean isPublic;
     private boolean isChanged;
     private FileInformation parentModule;
     private Map<String, FileInformation> useModules;
@@ -20,6 +21,7 @@ public class FileInformation {
     public FileInformation(String path) {
         nameModule = null;
         this.path = path;
+        isPublic = true;
         isChanged = true;
         variables = new ArrayList<>();
         functions = new ArrayList<>();
@@ -34,6 +36,7 @@ public class FileInformation {
         nameModule = null;
         this.path = path;
         isChanged = true;
+        isPublic = true;
         variables = new ArrayList<>();
         functions = new ArrayList<>();
         this.parentModule = parentModule;
@@ -59,6 +62,10 @@ public class FileInformation {
         return useModules;
     }
 
+    public ChapelUseStatement getUseStatement() {
+        return useStatement;
+    }
+
     public SimpleNode getRoot() {
         return root;
     }
@@ -81,13 +88,18 @@ public class FileInformation {
         if (!isParse) {
             root = Parser.parse(path);
         }
+        if (root != null && Objects.equals(root.toString(), "ModuleDeclarationStatement")) {
+            if (Objects.equals(root.jjtGetChild(0).toString(), "PrivacySpecifier")
+                    && !Objects.equals(((SimpleNode) root.jjtGetChild(0)).jjtGetFirstToken().image, "public")) {
+                isPublic = false;
+            }
+            nameModule = root.jjtGetFirstToken().next.image;
+            if (Objects.equals(nameModule, "module")) {
+                nameModule = root.jjtGetFirstToken().next.next.image;
+            }
+        }
         if (root != null) {
             useStatement = new ChapelUseStatement(root);
-        }
-        if (root != null && Objects.equals(root.toString(), "ModuleDeclarationStatement")) {
-            nameModule = root.jjtGetFirstToken().next.image;
-        }
-        if (root != null) {
             for (int i = 0; i < root.jjtGetNumChildren(); i++) {
                 if (Objects.equals(root.jjtGetChild(i).toString(), "Statement")) {
                     if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "VariableDeclarationStatement")) {
@@ -104,7 +116,11 @@ public class FileInformation {
                     } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "ProcedureDeclarationStatement") || Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "MethodDeclarationStatement")) {
                         functions.add(new DefinitionFunction((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
                     } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "ModuleDeclarationStatement")) {
-                        useModules.put(((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)).jjtGetFirstToken().next.image, new FileInformation(path, this, (SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
+                        String name = ((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)).jjtGetFirstToken().next.image;
+                        if (Objects.equals(name, "module")) {
+                            name = ((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)).jjtGetFirstToken().next.next.image;
+                        }
+                        useModules.put(name, new FileInformation(path, this, (SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
                     } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "BlockStatement")) {
                         SimpleNode block = (SimpleNode) root.jjtGetChild(i).jjtGetChild(0);
                         for (int j = 0; j < block.jjtGetNumChildren(); j++) {
@@ -123,7 +139,11 @@ public class FileInformation {
                                 } else if (Objects.equals(block.jjtGetChild(j).jjtGetChild(0).toString(), "ProcedureDeclarationStatement") || Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "MethodDeclarationStatement")) {
                                     functions.add(new DefinitionFunction((SimpleNode) block.jjtGetChild(j).jjtGetChild(0)));
                                 } else if (Objects.equals(block.jjtGetChild(j).jjtGetChild(0).toString(), "ModuleDeclarationStatement")) {
-                                    useModules.put(((SimpleNode) block.jjtGetChild(j).jjtGetChild(0)).jjtGetFirstToken().next.image, new FileInformation(path, this, (SimpleNode) block.jjtGetChild(j).jjtGetChild(0)));
+                                    String name = ((SimpleNode) block.jjtGetChild(j).jjtGetChild(0)).jjtGetFirstToken().next.image;
+                                    if (Objects.equals(name, "module")) {
+                                        name = ((SimpleNode) block.jjtGetChild(j).jjtGetChild(0)).jjtGetFirstToken().next.next.image;
+                                    }
+                                    useModules.put(name, new FileInformation(path, this, (SimpleNode) block.jjtGetChild(j).jjtGetChild(0)));
                                 }
                             }
                         }

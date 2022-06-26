@@ -1,43 +1,47 @@
-var t;
+var declarationGlobal;
+declarationGlobal = 5;
 
-t = 353;
-t += 3;
+var declarationAndDefinitionGlobal = 7;
+declarationGlobal += declarationAndDefinitionGlobal;
 
 module Main {
-    var x = 12;
+    var localMain = 12;
+    localMain -= declarationAndDefinitionGlobal + 9;
 
-    module Zun {
-        var y = 43;
-        Main.x = 5;
+    foo(); // wrong
+    A.foo();
+
+    module A {
         proc foo() {}
+        foo();
+
+        Main.B.foo();
+        B.foo(); // wrong
+
+        Main.C.foo(); // wrong
+        C.foo(); // wrong
     }
 
-    proc foo() {}
-    proc fuck() {}
-    proc va() {}
+    var declarationLocalMain;
 
-    var x = 23;
-    x += 34;
+    module B {
+        proc foo() {}
+        foo();
 
-    var i;
+        Main.A.foo();
+        A.foo(); // wrong
 
-    {
-        var y = 34;
-        y = 43;
+        var localB;
+        localB = Main.localMain;
     }
 
-    i = 6;
-    y = 54;
+    private module C {
+        proc foo() {}
+        foo();
+        Main.B.foo();
+    }
 
-    var y = 5;
-    y = 342;
-    i += 9;
-    y = 54;
+    C.foo(); // wrong
 
-    proc foo() {}
-
-    config const printLocaleName = true;
-    printLocaleName = false;
-    foo();
-    Zun.foo();
+    declarationLocalMain = B.localB;
 }

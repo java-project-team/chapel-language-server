@@ -17,7 +17,11 @@ public class Vertex {
         List<String> ans = new ArrayList<>();
         for (var node = vertex; node != null; node = (SimpleNode) node.jjtGetParent()) {
             if (Objects.equals(node.toString(), "ModuleDeclarationStatement")) {
-                ans.add(node.jjtGetFirstToken().next.image);
+                String name = node.jjtGetFirstToken().next.image;
+                if (name == "module") {
+                    name = node.jjtGetFirstToken().next.next.image;
+                }
+                ans.add(name);
             }
         }
         Collections.reverse(ans);

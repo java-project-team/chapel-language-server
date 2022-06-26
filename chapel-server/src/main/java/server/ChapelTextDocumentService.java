@@ -268,7 +268,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ArrayList<Integer> resTokens = new ArrayList<>();
 
 
-
 //        LOG.info(fileModule.toString());
         var queue = new LinkedList<ChapelStatement>();
         queue.add(fileModule);
