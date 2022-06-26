@@ -285,7 +285,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     private SemanticTokens findSemanticTokens(SimpleNode rootNode) {
 
-        LOG.info(dump(rootNode, ""));
+//        LOG.info(dump(rootNode, ""));
         ChapelModule fileModule = createChapelModule(rootNode);
         importHierarchy(fileModule);
 //        LOG.info(fileModule.toString());
@@ -297,25 +297,22 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ChapelModule currentModule;
         while (!queue.isEmpty()) {
             currentModule = queue.poll();
-//            LOG.info(currentModule.name);
             inModule(currentModule, resTokens);
             queue.addAll(currentModule.subModules.values());
         }
         resTokens.sort((s1, s2) -> s1.line - s2.line == 0 ? s1.startChar - s2.startChar : s1.line - s2.line);
         var f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
-        LOG.info("abs = " + f);
+//        LOG.info("abs = " + f);
         for (int i = resTokens.size() - 1; i > 0; i--) {
-//            if (i != 0) {
                 var curSemanticToken = resTokens.get(i);
                 var prevSemanticToken = resTokens.get(i - 1);
                 curSemanticToken.line -= prevSemanticToken.line;
                 if (curSemanticToken.line == 0) {
                     curSemanticToken.startChar -= prevSemanticToken.startChar;
                 }
-//            }
         }
         f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
-        LOG.info("delta = " + f);
+//        LOG.info("delta = " + f);
         return new SemanticTokens(f);
     }
 
@@ -436,7 +433,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
             return res;
         }
         int modulesCallLength = idListCorrectModuleCallLength(idMemberTokens, reachableModules);
-        LOG.info(String.valueOf(modulesCallLength));
         for (int i = 0; i < modulesCallLength; i++) {
             var id = idMemberTokens.get(i);
             res.add(createSemanticTokenFromId.apply(id, SemanticTokensConstants.NAMESPACE_TOKEN_INDEX));
