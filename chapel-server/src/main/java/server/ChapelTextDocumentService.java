@@ -11,11 +11,11 @@ import requests.DefinitionProvider;
 import server.semantic.tokens.*;
 
 import java.io.File;
-import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -33,7 +33,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
-        LOG.info("definition");
+//        LOG.info("definition");
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
@@ -57,7 +57,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
     // у меня в стандартных не было, добавляла сама (Ctrl + Shift + A)
     @Override
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> declaration(DeclarationParams params) {
-        LOG.info("declaration");
+//        LOG.info("declaration");
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
@@ -80,16 +80,16 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
-        LOG.info("semanticTokensFull");
+//        LOG.info("semanticTokensFull");
         try {
             var doc = new File(new URI(params.getTextDocument().getUri()));
             var rootNode = Parser.parse(doc.getAbsolutePath());
             assert rootNode != null;
             SemanticTokens ans = findSemanticTokens(rootNode);
+            return CompletableFuture.completedFuture(ans);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        return CompletableFuture.completedFuture(new SemanticTokens(new ArrayList<>()));
     }
 
     void importHierarchy(ChapelModule rootModule) {
@@ -120,7 +120,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 if (colors[v.index] != 0) {
                     return;
                 }
-                Logger.getAnonymousLogger().info(v.module.name);
+//                Logger.getAnonymousLogger().info(v.module.name);
                 colors[v.index] = color;
                 for (var from : v.from) {
                     if (!from.isPublic) {
@@ -193,7 +193,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
         int cc = 0;
         for (var dfsNode : topSortOrder) {
             cc++;
-            LOG.info("color: " + cc);
+//            LOG.info("color: " + cc);
             DFSNode.reachDFS(color, cc, dfsNode);
         }
 
@@ -289,60 +289,118 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ChapelModule fileModule = createChapelModule(rootNode);
         importHierarchy(fileModule);
 
-
         ArrayList<Integer> resTokens = new ArrayList<>();
 
-
-        var queue = new LinkedList<ChapelStatement>();
+        var queue = new LinkedList<ChapelModule>();
         queue.add(fileModule);
-        ChapelStatement currentChapelStatement;
-
+        ChapelModule currentModule;
         while (!queue.isEmpty()) {
-            currentChapelStatement = queue.poll();
+            currentModule = queue.poll();
+//            LOG.info(currentModule.name);
+            inModule(currentModule, resTokens);
+            queue.addAll(currentModule.subModules.values());
+        }
+        LOG.info("abs = " + resTokens.toString());
+        ArrayList<Integer> deltaResTokens = new ArrayList<>(resTokens);
+        for (int i = 0; i < resTokens.size(); i += 5) {
+            if (i != 0 && resTokens.get(i).equals(resTokens.get(i - 5))) {
+                deltaResTokens.set(i, 0);
+                deltaResTokens.set(i + 1, resTokens.get(i + 1) - resTokens.get(i - 4));
+            }
+        }
+        LOG.info("delta = " + deltaResTokens.toString());
+        return new SemanticTokens(resTokens);
+    }
 
-            switch (currentChapelStatement.rootNode.getId()) {
-                case JJTEXPRESSION -> {
-                    var firstToken = currentChapelStatement.rootNode.jjtGetFirstToken();
-                    var lastToken = currentChapelStatement.rootNode.jjtGetLastToken();
+    private void inModule(ChapelModule currentModule, ArrayList<Integer> resTokens) {
+        var currentReachableModules = new HashMap<String, ChapelModule>();
+        currentReachableModules.putAll(currentModule.usedModules);
+        currentReachableModules.putAll(currentModule.subModules);
 
-                    var currentToken = firstToken;
-                    ArrayList<Token> idMemberTokens = new ArrayList<>();
-                    while (!currentToken.equals(lastToken)) {
-                        if (currentToken.kind == ParserConstants.ID) {
-                            idMemberTokens.add(currentToken);
-                            if (currentToken.next.kind == ParserConstants.LPARENTHESIS) {
-                                resTokens.addAll(parseMembersCall(idMemberTokens, currentChapelStatement));
-                                // todo добавить токен об определении функция ли это или метод
-                            }
-                        }
-                        currentToken = currentToken.next;
+        goThrough(currentModule, currentReachableModules, resTokens);
+    }
+
+    private void goThrough(ChapelStatement currentStatement, HashMap<String, ChapelModule> reachableModules, ArrayList<Integer> resTokens) {
+        ArrayList<Map.Entry<String, ChapelModule>> addedModules = new ArrayList<>();
+        for (var entry : currentStatement.usedModules.entrySet()) {
+            if (!reachableModules.containsKey(entry.getKey())) {
+                addedModules.add(entry);
+                reachableModules.put(entry.getKey(), entry.getValue());
+            }
+        }
+        for (var expr : currentStatement.expressions) {
+            var firstToken = expr.rootNode.jjtGetFirstToken();
+            var lastToken = expr.rootNode.jjtGetLastToken().next;
+
+            var currentToken = firstToken;
+            ArrayList<Token> idMemberTokens = new ArrayList<>();
+//            LOG.info("last = " + lastToken.image);
+            while (!currentToken.equals(lastToken)) {
+                if (currentToken.kind == ParserConstants.ID) {
+                    idMemberTokens.add(currentToken);
+//                    LOG.info(currentToken.next.image);
+                    if (currentToken.next.kind == ParserConstants.LPARENTHESIS) {
+                        resTokens.addAll(parseMembers(idMemberTokens, currentStatement, reachableModules, true));
+                    } else if (currentToken.next.kind != ParserConstants.DOT) {
+                        resTokens.addAll(parseMembers(idMemberTokens, currentStatement, reachableModules, false));
                     }
                 }
-                default -> {
-
-                }
+                currentToken = currentToken.next;
             }
-
-            queue.addAll(currentChapelStatement.subStatements);
+        }
+        for (ChapelStatement subStatement : currentStatement.subStatements) {
+            goThrough(subStatement, reachableModules, resTokens);
+        }
+        for (ChapelStatement subStatement : currentStatement.procedures.values()) {
+            goThrough(subStatement, reachableModules, resTokens);
         }
 
-        return null;
+        for (var entry : addedModules) {
+            reachableModules.remove(entry.getKey());
+        }
     }
 
-    private ArrayList<Integer> parseMembersCall(ArrayList<Token> idMemberTokens,
-                                                ChapelStatement currentChapelExpressionStatement) {
+    private ArrayList<Integer> parseMembers(ArrayList<Token> idMemberTokens,
+                                            ChapelStatement currentChapelExpressionStatement,
+                                            HashMap<String, ChapelModule> reachableModules,
+                                            boolean isCallable) {
         assert !idMemberTokens.isEmpty();
         var callToken = idMemberTokens.get(idMemberTokens.size() - 1);
-        ChapelModule currentModule = currentChapelExpressionStatement.ownerModule;
-        // todo add parent statements
-//        if (isIdListCorrect(idMemberTokens, currentModule) || isIdListCorrect(idMemberTokens, cur)) {
-//
-//        }
+        BiFunction<Token, Integer, List<Integer>> createSemanticTokenFromId = (id, tokenNum) -> {
+            return Arrays.asList(
+                    id.beginLine,
+                    id.beginColumn,
+                    id.endColumn + 1 - id.beginColumn,
+                    tokenNum,
+                    0
+            );
+        };
+        var res = new ArrayList<Integer>();
+        int modulesCallLength = idListCorrectModuleCallLength(idMemberTokens, reachableModules);
+        for (int i = 0; i < modulesCallLength; i++) {
+            var id = idMemberTokens.get(i);
+            res.addAll(createSemanticTokenFromId.apply(id, SemanticTokensConstants.NAMESPACE_TOKEN_INDEX));
+        }
+        if (modulesCallLength == idMemberTokens.size() - 1 && isCallable) {
+            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.FUNCTION_TOKEN_INDEX));
+            return res;
+        }
+        for (int i = modulesCallLength; i < idMemberTokens.size() - 1; i++) {
+            var id = idMemberTokens.get(i);
+            res.addAll(createSemanticTokenFromId.apply(id, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
+        }
+        if (isCallable) {
+            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.METHOD_TOKEN_INDEX));
+        } else {
+            res.addAll(createSemanticTokenFromId.apply(callToken, SemanticTokensConstants.VARIABLE_TOKEN_INDEX));
+        }
+        return res;
     }
 
-    private boolean isIdListCorrect(ArrayList<Token> idList, ChapelStatement startStatement) {
-        var it = startStatement;
-        for (int i = 0; i < idList.size() - 1; i++) {
+    private int idListCorrectModuleCallLength(ArrayList<Token> idList, HashMap<String, ChapelModule> reachableModules) {
+        var it = reachableModules.get(idList.get(0).image);
+        int i = 0;
+        for (; i < idList.size() - 1; i++) {
             var idToken = idList.get(i);
             var tokenImage = idToken.image;
             if (it.subModules.containsKey(tokenImage)) {
@@ -350,18 +408,10 @@ public class ChapelTextDocumentService implements TextDocumentService {
             } else if (it.usedModules.containsKey(tokenImage)) {
                 it = it.usedModules.get(tokenImage);
             } else {
-                return false;
+                break;
             }
         }
-        return true;
-    }
-
-    private ArrayList<Integer> createTokenDescription(int line,
-                                                      int startChar,
-                                                      int length,
-                                                      int tokenType,
-                                                      int tokenModifiers) {
-
+        return i;
     }
 
     private String dump(SimpleNode rootNode, String prefix) {
@@ -428,6 +478,12 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         idToken = getIdFromNode(currentContentNode);
                         assert idToken != null;
                         currentChapelStatement.variables.add(idToken.image);
+                        for (int i = 0; i < currentContentNode.jjtGetNumChildren(); i++) {
+                            var mbExprNode = (SimpleNode) currentContentNode.jjtGetChild(i);
+                            if (mbExprNode.getId() == JJTEXPRESSION) {
+                                currentChapelStatement.expressions.add(new ChapelExpression(mbExprNode));
+                            }
+                        }
                     }
                     case JJTCLASSDECLARATIONSTATEMENT -> {
                         //todo
@@ -479,12 +535,12 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
-        LOG.info("didOpen");
+//        LOG.info("didOpen");
     }
 
     @Override
     public CompletableFuture<List<? extends CodeLens>> codeLens(CodeLensParams params) {
-        LOG.info("codeLens");
+//        LOG.info("codeLens");
         List<CodeLens> list = new ArrayList<>(getVarTypeLensesInDocument(params.getTextDocument()));
         return CompletableFuture.completedFuture(list);
     }
@@ -555,12 +611,10 @@ public class ChapelTextDocumentService implements TextDocumentService {
         for (int i = 1; i < child.jjtGetNumChildren(); i++) {
             var part = child.jjtGetChild(i);
             if (part.toString().equals("TypePart")) {
-//                    LOG.info("2");
                 return "";
             } else if (part.toString().equals("InitializationPart")) {
                 if (part.jjtGetChild(0).jjtGetChild(0).toString().equals("LiteralExpression")
                 ) {
-//                        LOG.info("4");
                     return part.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).toString();
                 }
             }
@@ -570,7 +624,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
 
     @Override
     public CompletableFuture<CodeLens> resolveCodeLens(CodeLens unresolved) {
-        LOG.info(unresolved.toString());
+//        LOG.info(unresolved.toString());
         return CompletableFuture.completedFuture(unresolved);
     }
 

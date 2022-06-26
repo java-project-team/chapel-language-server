@@ -1,5 +1,6 @@
 package server.semantic.tokens;
 
+import org.checkerframework.checker.units.qual.A;
 import parser.ParserTreeConstants;
 import parser.SimpleNode;
 
@@ -31,12 +32,19 @@ public class ChapelStatement {
     public final HashMap<String, ChapelProcedure> procedures = new HashMap<>();
     public final ArrayList<ChapelStatement> subStatements = new ArrayList<>();
     public final HashSet<String> variables = new HashSet<>();
+    public final ArrayList<ChapelExpression> expressions = new ArrayList<>();
 
     public final HashMap<String, ChapelModule> subModules = new HashMap<>();
     public final HashMap<String, ChapelModule> usedModules = new HashMap<>();
 
     protected ChapelStatement(SimpleNode newRootNode) {
         this.rootNode = newRootNode;
+        for (int i = 0; i < rootNode.jjtGetNumChildren(); i++) {
+            SimpleNode node = (SimpleNode) rootNode.jjtGetChild(i);
+            if (node.getId() == ParserTreeConstants.JJTEXPRESSION) {
+                expressions.add(new ChapelExpression(node));
+            }
+        }
     }
     @Override
     public String toString() {

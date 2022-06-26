@@ -24,6 +24,7 @@ import requests.FileInformation;
 import server.semantic.tokens.*;
 
 import static parser.ParserTreeConstants.*;
+import static server.semantic.tokens.SemanticTokensConstants.LEGEND_TOKENS;
 
 public class ServerImpl implements LanguageServer, LanguageClientAware {
     private static final Logger LOG = Logger.getLogger("server");
@@ -39,14 +40,14 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setCodeActionProvider(false);
         capabilities.setColorProvider(false);
-        capabilities.setDeclarationProvider(true);
-        capabilities.setDefinitionProvider(true);
-        capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
-        capabilities.setHoverProvider(false);
+//        capabilities.setDeclarationProvider(true);
+//        capabilities.setDefinitionProvider(true);
+//        capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
+//        capabilities.setHoverProvider(false);
 
-        capabilities.setCallHierarchyProvider(true);
+//        capabilities.setCallHierarchyProvider(true);
 
-        folders = params.getWorkspaceFolders();
+//        folders = params.getWorkspaceFolders();
         // todo не работает
 //        for (var folder : folders) {
 //            try (var pathsStream = Files.walk(Path.of(new URI(folder.getUri())))) {
@@ -64,21 +65,21 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
 //            LOG.info(e.getValue().getFunctions().toString());
 //        }
 
-        var codeLensOptions = new CodeLensOptions();
-        codeLensOptions.setWorkDoneProgress(false);
-        codeLensOptions.setResolveProvider(true);
-        capabilities.setCodeLensProvider(codeLensOptions);
+//        var codeLensOptions = new CodeLensOptions();
+//        codeLensOptions.setWorkDoneProgress(false);
+//        codeLensOptions.setResolveProvider(true);
+//        capabilities.setCodeLensProvider(codeLensOptions);
 
-        var execOptions = new ExecuteCommandOptions();
-        execOptions.setCommands(Collections.singletonList(ServerConstants.InsertVarTypeCommand));
-        capabilities.setExecuteCommandProvider(execOptions);
+//        var execOptions = new ExecuteCommandOptions();
+//        execOptions.setCommands(Collections.singletonList(ServerConstants.InsertVarTypeCommand));
+//        capabilities.setExecuteCommandProvider(execOptions);
 
         var semanticTokensProvider = new SemanticTokensWithRegistrationOptions();
         semanticTokensProvider.setFull(true);
         semanticTokensProvider.setRange(false);
         semanticTokensProvider.setLegend(
                 new SemanticTokensLegend(
-                        List.of("namespace", "class", "enum", "variable", "enumMember", "function", "method", "keyword"),
+                        LEGEND_TOKENS,
                         List.of()));
         capabilities.setSemanticTokensProvider(semanticTokensProvider);
 
