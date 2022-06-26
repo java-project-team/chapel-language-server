@@ -478,12 +478,8 @@ public class ChapelTextDocumentService implements TextDocumentService {
                         idToken = getIdFromNode(currentContentNode);
                         assert idToken != null;
                         currentChapelStatement.variables.add(idToken.image);
-                        for (int i = 0; i < currentContentNode.jjtGetNumChildren(); i++) {
-                            var mbExprNode = (SimpleNode) currentContentNode.jjtGetChild(i);
-                            if (mbExprNode.getId() == JJTEXPRESSION) {
-                                currentChapelStatement.expressions.add(new ChapelExpression(mbExprNode));
-                            }
-                        }
+                        currentChapelStatement.expressions.addAll(expressionsFromVarDeclaration(currentContentNode));
+
                     }
                     case JJTCLASSDECLARATIONSTATEMENT -> {
                         //todo
@@ -499,6 +495,18 @@ public class ChapelTextDocumentService implements TextDocumentService {
             }
         }
         return fileModule;
+    }
+
+    private List<ChapelExpression> expressionsFromVarDeclaration(SimpleNode currentContentNode) {
+        if (currentContentNode.getId() == JJTEXPRESSION) {
+            return List.of(new ChapelExpression(currentContentNode));
+        }
+        var ans = new ArrayList<ChapelExpression>();
+        for (int i = 0; i < currentContentNode.jjtGetNumChildren(); i++) {
+            var mbExprNode = (SimpleNode) currentContentNode.jjtGetChild(i);
+            ans.addAll(expressionsFromVarDeclaration(mbExprNode));
+        }
+        return ans;
     }
 
     private void determineParentModule(ChapelStatement child, ChapelStatement current) {

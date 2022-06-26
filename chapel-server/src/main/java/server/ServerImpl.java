@@ -40,9 +40,9 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setCodeActionProvider(false);
         capabilities.setColorProvider(false);
-//        capabilities.setDeclarationProvider(true);
-//        capabilities.setDefinitionProvider(true);
-//        capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
+        capabilities.setDeclarationProvider(true);
+        capabilities.setDefinitionProvider(true);
+        capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
 //        capabilities.setHoverProvider(false);
 
 //        capabilities.setCallHierarchyProvider(true);
