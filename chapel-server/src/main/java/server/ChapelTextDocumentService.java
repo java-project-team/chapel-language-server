@@ -496,7 +496,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
         for (; i < idList.size() - 1; i++) {
             var idToken = idList.get(i);
             var tokenImage = idToken.image;
-            LOG.info(tokenImage);
+//            LOG.info(tokenImage);
             if (it.subModules.containsKey(tokenImage)) {
                 it = it.subModules.get(tokenImage);
             } else if (it.usedModules.containsKey(tokenImage)) {

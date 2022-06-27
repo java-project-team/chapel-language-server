@@ -558,11 +558,13 @@ void ProcedureDeclarationStatement() :
 {
     [PrivacySpecifier()]
     [ProcKind()]
-    (<PROC> Identifier() [LOOKAHEAD(3)ArgumentList()] | <OPERATOR> Operator() ArgumentList())
-    [LOOKAHEAD(3)ReturnIntent()]
+    (
+        (<PROC> Identifier() [ArgumentList()])
+        | (<OPERATOR> Operator() ArgumentList())
+    )
+    [ReturnIntent()]
     [ReturnType() ]
     [WhereClause() ] Statement()
-
 }
 
 void WhereClause() : {}
