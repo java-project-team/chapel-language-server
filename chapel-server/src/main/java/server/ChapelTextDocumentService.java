@@ -104,7 +104,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 }
             }
 
-            int index = 0;
+            final int index;
             public final ChapelModule module;
             public ArrayList<Edge> to = new ArrayList<>();
             public ArrayList<Edge> from = new ArrayList<>();
@@ -297,7 +297,16 @@ public class ChapelTextDocumentService implements TextDocumentService {
         ChapelModule currentModule;
         while (!queue.isEmpty()) {
             currentModule = queue.poll();
-            inModule(currentModule, resTokens);
+            var id = findFirstId(currentModule.rootNode);
+            if (id != null) {
+                resTokens.add(new SemanticToken(
+                        id.beginLine - 1,
+                        id.beginColumn - 1,
+                        id.endColumn - id.beginColumn + 1,
+                        SemanticTokensConstants.NAMESPACE_TOKEN_INDEX,
+                        0));
+                inModule(currentModule, resTokens);
+            }
             queue.addAll(currentModule.subModules.values());
         }
         resTokens.sort((s1, s2) -> s1.line - s2.line == 0 ? s1.startChar - s2.startChar : s1.line - s2.line);
@@ -329,10 +338,35 @@ public class ChapelTextDocumentService implements TextDocumentService {
         goThrough(currentModule, currentReachableModules, currentReachableProcedures, resTokens);
     }
 
+    private Token findFirstId(SimpleNode node) {
+        for (Token current = node.jjtGetFirstToken();
+             !current.equals(node.jjtGetLastToken());
+             current = current.next) {
+            if (current.kind == ParserConstants.ID) {
+                return current;
+            }
+        }
+        return null;
+    }
+
     private void goThrough(ChapelStatement currentStatement,
                            HashMap<String, ChapelModule> reachableModules,
                            HashMap<String, ChapelProcedure> reachableProcedures,
                            ArrayList<SemanticToken> resTokens) {
+        if (currentStatement.rootNode.getId() == JJTPROCEDUREDECLARATIONSTATEMENT ||
+            currentStatement.rootNode.getId() == JJTCLASSDECLARATIONSTATEMENT) {
+            var id = findFirstId(currentStatement.rootNode);
+            if (id != null) {
+                resTokens.add(new SemanticToken(
+                        id.beginLine - 1,
+                        id.beginColumn - 1,
+                        id.endColumn - id.beginColumn + 1,
+                        currentStatement.rootNode.getId() == JJTPROCEDUREDECLARATIONSTATEMENT ?
+                                SemanticTokensConstants.FUNCTION_TOKEN_INDEX :
+                                SemanticTokensConstants.CLASS_TOKEN_INDEX,
+                        0));
+            }
+        }
         ArrayList<Map.Entry<String, ChapelModule>> addedModules = new ArrayList<>();
         for (var entry : currentStatement.usedModules.entrySet()) {
             if (!reachableModules.containsKey(entry.getKey())) {
@@ -415,15 +449,13 @@ public class ChapelTextDocumentService implements TextDocumentService {
         var lastToken = idMemberTokens.get(idMemberTokens.size() - 1);
         var res = new ArrayList<SemanticToken>();
 
-        BiFunction<Token, Integer, SemanticToken> createSemanticTokenFromId = (id, tokenNum) -> {
-            return new SemanticToken(
-                    id.beginLine - 1,
-                    id.beginColumn - 1,
-                    id.endColumn - (id.beginColumn - 1),
-                    tokenNum,
-                    0
-            );
-        };
+        BiFunction<Token, Integer, SemanticToken> createSemanticTokenFromId = (id, tokenNum) -> new SemanticToken(
+                id.beginLine - 1,
+                id.beginColumn - 1,
+                id.endColumn - (id.beginColumn - 1),
+                tokenNum,
+                0
+        );
         if (idMemberTokens.size() == 1 && isCallable) {
             if (reachableChapelProcedures.containsKey(lastToken.image)) {
                 res.add(createSemanticTokenFromId.apply(lastToken, SemanticTokensConstants.FUNCTION_TOKEN_INDEX));
