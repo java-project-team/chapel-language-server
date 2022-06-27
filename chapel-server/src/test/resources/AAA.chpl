@@ -41,6 +41,15 @@ module Main {
         Main.B.foo();
     }
 
+    class Class {
+        proc foo() {
+            another();
+        }
+        proc another() {
+
+        }
+    }
+
     C.foo(); // wrong
 
     declarationLocalMain = B.localB;

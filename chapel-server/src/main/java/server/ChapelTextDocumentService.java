@@ -37,7 +37,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
-            var res = definitionProvider.findDefinition(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
+            var res = definitionProvider.findDefinition((new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
             if (res == null) {
                 res = new ArrayList<>();
             }
@@ -54,14 +54,14 @@ public class ChapelTextDocumentService implements TextDocumentService {
         }
     }
 
-    // у меня в стандартных не было, добавляла сама (Ctrl + Shift + A)
+    // у меня в стандартных не было, добавляла сама (на F3 норм работает)
     @Override
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> declaration(DeclarationParams params) {
         LOG.info("declaration");
         params.getPosition().setLine(params.getPosition().getLine() + 1);
         params.getPosition().setCharacter(params.getPosition().getCharacter() + 1);
         try {
-            var res = definitionProvider.findDeclaration(LOG, (new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
+            var res = definitionProvider.findDeclaration((new URI(params.getTextDocument().getUri())).getPath(), params.getPosition());
             if (res == null) {
                 res = new ArrayList<>();
             }
@@ -71,7 +71,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 a.getRange().getStart().setCharacter(a.getRange().getStart().getCharacter() - 1);
                 a.getRange().getEnd().setCharacter(a.getRange().getEnd().getCharacter() - 1);
             }).toList();
-//            LOG.info(res.toString());
             return CompletableFuture.completedFuture(Either.forLeft(res));
         } catch (Exception ignored) {
             return null;
@@ -120,7 +119,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 if (colors[v.index] != 0) {
                     return;
                 }
-//                Logger.getAnonymousLogger().info(v.module.name);
                 colors[v.index] = color;
                 for (var from : v.from) {
                     if (!from.isPublic) {
@@ -193,7 +191,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
         int cc = 0;
         for (var dfsNode : topSortOrder) {
             cc++;
-//            LOG.info("color: " + cc);
             DFSNode.reachDFS(color, cc, dfsNode);
         }
 
