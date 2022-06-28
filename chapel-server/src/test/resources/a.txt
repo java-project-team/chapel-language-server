@@ -1,0 +1,5 @@
+module Main {
+    var a = 8;
+}
+
+Main.a = 4;
