@@ -2,8 +2,6 @@ package requests;
 
 import parser.SimpleNode;
 
-// мб чего еще потребуется
-
 public class DefinitionVariable {
     private final String name;
     private final SimpleNode nodeDeclaration;

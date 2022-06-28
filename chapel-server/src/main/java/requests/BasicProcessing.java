@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class BasicProcessing {
-    private Map<String, FileInformation> files;
+    private final Map<String, FileInformation> files;
 
     public BasicProcessing(List<String> files) {
         this.files = new HashMap<>();

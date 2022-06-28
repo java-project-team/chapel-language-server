@@ -4,8 +4,6 @@ import parser.SimpleNode;
 
 import java.util.Objects;
 
-// чет пока не очень поняла что да как
-
 public class DefinitionFunction {
     private final String type;
     private final String name;

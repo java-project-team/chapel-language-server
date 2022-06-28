@@ -9,16 +9,17 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class Vertex {
-    public static Pair<SimpleNode, List<String>> findModule(Logger LOG, Position position, SimpleNode root) {
-        var vertex = find(LOG, position, root);
-        return findModule(LOG, vertex);
+    public static Pair<SimpleNode, List<String>> findModule(Position position, SimpleNode root) {
+        var vertex = find(position, root);
+        return findModule(vertex);
     }
-    public static Pair<SimpleNode, List<String>> findModule(Logger LOG, SimpleNode vertex) {
+
+    public static Pair<SimpleNode, List<String>> findModule(SimpleNode vertex) {
         List<String> ans = new ArrayList<>();
         for (var node = vertex; node != null; node = (SimpleNode) node.jjtGetParent()) {
             if (Objects.equals(node.toString(), "ModuleDeclarationStatement")) {
                 String name = node.jjtGetFirstToken().next.image;
-                if (name == "module") {
+                if (Objects.equals(name, "module")) {
                     name = node.jjtGetFirstToken().next.next.image;
                 }
                 ans.add(name);
@@ -28,8 +29,8 @@ public class Vertex {
         return new Pair<>(vertex, ans);
     }
 
-    // по заданной локации ищет вершину в дереве
-    static SimpleNode find(Logger LOG, Position position, SimpleNode root) {
+
+    static SimpleNode find(Position position, SimpleNode root) {
         if (root == null || position == null) {
             return null;
         }
@@ -45,7 +46,7 @@ public class Vertex {
         else {
             for (int i = 0; i < root.jjtGetNumChildren(); i++) {
                 SimpleNode vertex = (SimpleNode) root.jjtGetChild(i);
-                SimpleNode res = find(LOG, position, vertex);
+                SimpleNode res = find(position, vertex);
                 if (res != null) {
                     return res;
                 }
