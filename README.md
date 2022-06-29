@@ -5,7 +5,6 @@
 Для разработки использовали реализацию [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) на Java - [lsp4j](https://github.com/eclipse/lsp4j).
 
 ## Инструкция по сборке
-TODO
 1. В папке chapel-server нужно сделать build с помошью Gradle, запустив таску shadowJar
 2. В основной папке нужно прописать npm install
 3. Запустить Visual Studio Code в основной папке, скомпилировать и запустить
