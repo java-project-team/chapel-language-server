@@ -26,13 +26,13 @@ public class DefinitionProvider {
         var parentModules = Vertex.findModule(var).getValue();
         List<Location> ans;
 
-        try {
+        /*try {
             ans = findDeclarationInLocalModule(uri, var, new ArrayList<>(), modules);
             if (!ans.isEmpty()) {
                 return ans;
             }
         } catch (Exception ignore) {
-        }
+        }*/
 
 
         try {
@@ -50,10 +50,10 @@ public class DefinitionProvider {
     public List<Location> findDeclarationInLocalModule(String uri, SimpleNode var, List<String> parentModules, List<String> modules) throws Exception {
         var module = filesInformation.getFileInformation(uri);
         for (String s : parentModules) {
-            module = module.getUseModules().get(s);
+            module = module.getInModules().get(s);
         }
         for (String s : modules) {
-            module = module.getUseModules().get(s);
+            module = module.getInModules().get(s);
             if (!module.isPublic) {
                 throw new Exception();
             }
@@ -88,7 +88,11 @@ public class DefinitionProvider {
         SimpleNode root = filesInformation.getFileInformation(uri).getRoot();
         SimpleNode vertex = Vertex.find(position, root);
         List<String> modules = new ArrayList<>();
+        List<Location> answer = new ArrayList<>();
+        boolean isParentheses = false;
+        String nameVar = "";
         if (vertex != null) {
+            nameVar = vertex.jjtGetFirstToken().image;
             for (int i = 0; i <= vertex.jjtGetParent().jjtGetNumChildren() && Objects.equals((vertex.jjtGetParent().jjtGetChild(i)).toString(), "Identifier") && vertex != vertex.jjtGetParent().jjtGetChild(i); i++) {
                 String name = ((SimpleNode) vertex.jjtGetParent().jjtGetChild(i)).jjtGetFirstToken().image;
                 if (Objects.equals(name, "module")) {
@@ -98,15 +102,100 @@ public class DefinitionProvider {
             }
         }
         if (!modules.isEmpty() || (vertex != null && Objects.equals(vertex.jjtGetFirstToken().next.image, "("))) {
-            return findDeclarationInModule(uri, vertex, modules);
+            answer = findDeclarationInModule(uri, vertex, modules);
+            isParentheses = true;
+            if (!answer.isEmpty()) {
+                return answer;
+            }
+        } else {
+            var ans = findDeclarationNode(uri, position);
+            if (ans.listDeclaration.isEmpty()) {
+                answer = findDeclarationInModule(uri, vertex, modules);
+                if (!answer.isEmpty()) {
+                    return answer;
+                }
+            } else {
+                answer = ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+                        res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
+                        res.getValue().jjtGetLastToken().endColumn)))).toList();
+                if (!answer.isEmpty()) {
+                    return answer;
+                }
+            }
         }
-        var ans = findDeclarationNode(uri, position);
-        if (ans.listDeclaration.isEmpty()) {
-            return findDeclarationInModule(uri, vertex, modules);
+        return bfs(uri, root, modules, nameVar, isParentheses);
+    }
+
+    private List<Location> bfs(String uri, SimpleNode root, List<String> modules, String name, boolean isParentheses) {
+        var path = Vertex.findModule(root);
+        FileInformation currModule = filesInformation.getFileInformation(uri);
+        for (var i : path.getValue()) {
+            currModule = currModule.getInModules().get(i);
         }
-        return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
-                res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
-                res.getValue().jjtGetLastToken().endColumn)))).toList();
+        List<Location> answer = new ArrayList<>();
+        List<SimpleNode> ans = new ArrayList<>();
+        LinkedList<FileInformation> list = new LinkedList<>();
+        for (var i : currModule.getUseModules()) {
+            var module = filesInformation.getFileInformation(uri);
+            for (var j : i.getKey()) {
+                module = module.getInModules().get(j);
+            }
+            list.add(module);
+            ans.addAll(module
+                    .getVariables()
+                    .stream()
+                    .filter((a) -> Objects.equals(a.getName(), name))
+                    .map(DefinitionVariable::getNode)
+                    .toList());
+            for (DefinitionFunction j : module.getFunctions()) {
+                if (Objects.equals(j.getName(), name) && j.getIsParentheses() == isParentheses) {
+                    ans.add(j.getNode());
+                }
+            }
+        }
+        if (!ans.isEmpty()) {
+            for (var i : ans) {
+                answer.addAll(List.of(new Location(uri, new Range(new Position(i.jjtGetFirstToken().beginLine,
+                        i.jjtGetFirstToken().beginColumn), new Position(i.jjtGetLastToken().endLine,
+                        i.jjtGetLastToken().endColumn)))));
+            }
+            return answer;
+        }
+
+        while (!list.isEmpty()) {
+            currModule = list.pollFirst();
+            for (var i : currModule.getUseModules()) {
+                if (!i.getValue()) {
+                    continue;
+                }
+                var module = filesInformation.getFileInformation(uri);
+                for (var j : i.getKey()) {
+                    module = module.getInModules().get(j);
+                }
+                list.add(module);
+                ans.addAll(module
+                        .getVariables()
+                        .stream()
+                        .filter((a) -> Objects.equals(a.getName(), name))
+                        .map(DefinitionVariable::getNode)
+                        .toList());
+                for (DefinitionFunction j : module.getFunctions()) {
+                    if (Objects.equals(j.getName(), name) && j.getIsParentheses() == isParentheses) {
+                        ans.add(j.getNode());
+                    }
+                }
+            }
+            if (!ans.isEmpty()) {
+                for (var i : ans) {
+                    answer.addAll(List.of(new Location(uri, new Range(new Position(i.jjtGetFirstToken().beginLine,
+                            i.jjtGetFirstToken().beginColumn), new Position(i.jjtGetLastToken().endLine,
+                            i.jjtGetLastToken().endColumn)))));
+                }
+                return answer;
+            }
+        }
+
+        return answer;
     }
 
     private static class ReturnFindDeclarationNode {

@@ -27,8 +27,7 @@ public class BasicProcessing {
         if (!files.containsKey(file)) {
             System.out.println("file: " + file);
             files.put(file, new FileInformation(file));
-        }
-        else {
+        } else {
             files.get(file).update();
         }
     }

@@ -1,5 +1,6 @@
 package requests;
 
+import org.eclipse.xtext.xbase.lib.Pair;
 import parser.Parser;
 import parser.SimpleNode;
 import server.semantic.tokens.ChapelUseStatement;
@@ -12,8 +13,9 @@ public class FileInformation {
     boolean isPublic;
     private boolean isChanged;
     private FileInformation parentModule;
-    private Map<String, FileInformation> useModules;
+    private Map<String, FileInformation> inModules;
     private ChapelUseStatement useStatement;
+    private List<Pair<List<String>, Boolean>> useModules;
     private List<DefinitionVariable> variables;
     private List<DefinitionFunction> functions;
     private SimpleNode root;
@@ -26,7 +28,8 @@ public class FileInformation {
         variables = new ArrayList<>();
         functions = new ArrayList<>();
         parentModule = null;
-        useModules = new HashMap<>();
+        inModules = new HashMap<>();
+        useModules = new ArrayList<>();
         root = null;
         useStatement = null;
         update(false);
@@ -40,7 +43,8 @@ public class FileInformation {
         variables = new ArrayList<>();
         functions = new ArrayList<>();
         this.parentModule = parentModule;
-        useModules = new HashMap<>();
+        inModules = new HashMap<>();
+        useModules = new ArrayList<>();
         this.root = root;
         useStatement = null;
         update(true);
@@ -58,7 +62,11 @@ public class FileInformation {
         return nameModule;
     }
 
-    public Map<String, FileInformation> getUseModules() {
+    public Map<String, FileInformation> getInModules() {
+        return inModules;
+    }
+
+    public List<Pair<List<String>, Boolean>> getUseModules() {
         return useModules;
     }
 
@@ -74,7 +82,9 @@ public class FileInformation {
         return update(false);
     }
 
-    public FileInformation getParentModule() { return parentModule;}
+    public FileInformation getParentModule() {
+        return parentModule;
+    }
 
     private FileInformation update(boolean isParse) {
         if (!isChanged) {
@@ -82,8 +92,8 @@ public class FileInformation {
         }
         variables.clear();
         functions.clear();
-        useModules.clear();
-        //isChanged = false; // TODO как-то обновлять надо
+        inModules.clear();
+        //isChanged = false;
 
         if (!isParse) {
             root = Parser.parse(path);
@@ -120,7 +130,31 @@ public class FileInformation {
                         if (Objects.equals(name, "module")) {
                             name = ((SimpleNode) root.jjtGetChild(i).jjtGetChild(0)).jjtGetFirstToken().next.next.image;
                         }
-                        useModules.put(name, new FileInformation(path, this, (SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
+                        inModules.put(name, new FileInformation(path, this, (SimpleNode) root.jjtGetChild(i).jjtGetChild(0)));
+                    } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "UseStatement")) {
+                        SimpleNode useStatement = (SimpleNode) root.jjtGetChild(i).jjtGetChild(0);
+                        Pair<List<String>, Boolean> p;
+                        if (Objects.equals(useStatement.jjtGetChild(0).toString(), "PrivacySpecifier") && Objects.equals(((SimpleNode) useStatement.jjtGetChild(0)).jjtGetFirstToken().image, "public")) {
+                            p = new Pair<>(new ArrayList<>(), true);
+                        } else {
+                            p = new Pair<>(new ArrayList<>(), false);
+                        }
+                        for (int j = 0; j < useStatement.jjtGetNumChildren(); j++) {
+                            if (Objects.equals(useStatement.jjtGetChild(j).toString(), "ModuleOrEnumName")) {
+                                for (int k = 0; k < useStatement.jjtGetChild(j).jjtGetNumChildren(); k++) {
+                                    if (Objects.equals(useStatement.jjtGetChild(j).jjtGetChild(k).toString(), "Identifier")) {
+                                        p.getKey().add(((SimpleNode) useStatement.jjtGetChild(j).jjtGetChild(k)).jjtGetFirstToken().image);
+                                    }
+                                }
+                            }
+                        }
+                        var localPath = Vertex.findModule((SimpleNode) root.jjtGetParent()).getValue();
+                        if (p.getKey().isEmpty() || (!localPath.isEmpty() && !Objects.equals(p.getKey().get(0), localPath.get(0)))) {
+                            localPath.addAll(p.getKey());
+                            p.getKey().clear();
+                            p.getKey().addAll(localPath);
+                        }
+                        useModules.add(p);
                     } else if (Objects.equals(root.jjtGetChild(i).jjtGetChild(0).toString(), "BlockStatement")) {
                         SimpleNode block = (SimpleNode) root.jjtGetChild(i).jjtGetChild(0);
                         for (int j = 0; j < block.jjtGetNumChildren(); j++) {
@@ -143,7 +177,7 @@ public class FileInformation {
                                     if (Objects.equals(name, "module")) {
                                         name = ((SimpleNode) block.jjtGetChild(j).jjtGetChild(0)).jjtGetFirstToken().next.next.image;
                                     }
-                                    useModules.put(name, new FileInformation(path, this, (SimpleNode) block.jjtGetChild(j).jjtGetChild(0)));
+                                    inModules.put(name, new FileInformation(path, this, (SimpleNode) block.jjtGetChild(j).jjtGetChild(0)));
                                 }
                             }
                         }

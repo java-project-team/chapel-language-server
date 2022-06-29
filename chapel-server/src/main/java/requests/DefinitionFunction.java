@@ -25,7 +25,11 @@ public class DefinitionFunction {
         return type;
     }
 
-    public boolean getIsParentheses() { return isParentheses; }
+    public boolean getIsParentheses() {
+        return isParentheses;
+    }
 
-    public SimpleNode getNode() { return node; }
+    public SimpleNode getNode() {
+        return node;
+    }
 }

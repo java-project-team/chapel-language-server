@@ -19,8 +19,8 @@ module Main {
     module Zzz {
         use Zun;
         var y = 43;
-        Main.x = 5;
-        proc foo() {}
+        Main.x = 5; 
+        foo();
     }
 
     proc foo() {}

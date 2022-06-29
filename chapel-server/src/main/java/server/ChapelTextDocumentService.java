@@ -310,12 +310,12 @@ public class ChapelTextDocumentService implements TextDocumentService {
         var f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
 //        LOG.info("abs = " + f);
         for (int i = resTokens.size() - 1; i > 0; i--) {
-                var curSemanticToken = resTokens.get(i);
-                var prevSemanticToken = resTokens.get(i - 1);
-                curSemanticToken.line -= prevSemanticToken.line;
-                if (curSemanticToken.line == 0) {
-                    curSemanticToken.startChar -= prevSemanticToken.startChar;
-                }
+            var curSemanticToken = resTokens.get(i);
+            var prevSemanticToken = resTokens.get(i - 1);
+            curSemanticToken.line -= prevSemanticToken.line;
+            if (curSemanticToken.line == 0) {
+                curSemanticToken.startChar -= prevSemanticToken.startChar;
+            }
         }
         f = resTokens.stream().flatMap(x -> x.toArray().stream()).toList();
 //        LOG.info("delta = " + f);
@@ -351,7 +351,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                            HashMap<String, ChapelProcedure> reachableProcedures,
                            ArrayList<SemanticToken> resTokens) {
         if (currentStatement.rootNode.getId() == JJTPROCEDUREDECLARATIONSTATEMENT ||
-            currentStatement.rootNode.getId() == JJTCLASSDECLARATIONSTATEMENT) {
+                currentStatement.rootNode.getId() == JJTCLASSDECLARATIONSTATEMENT) {
             var id = findFirstId(currentStatement.rootNode);
             if (id != null) {
                 resTokens.add(new SemanticToken(
@@ -438,10 +438,10 @@ public class ChapelTextDocumentService implements TextDocumentService {
     }
 
     private ArrayList<SemanticToken> parseMembers(ArrayList<Token> idMemberTokens,
-                                            ChapelStatement currentChapelExpressionStatement,
-                                            HashMap<String, ChapelModule> reachableModules,
-                                            HashMap<String, ChapelProcedure> reachableChapelProcedures,
-                                            boolean isCallable) {
+                                                  ChapelStatement currentChapelExpressionStatement,
+                                                  HashMap<String, ChapelModule> reachableModules,
+                                                  HashMap<String, ChapelProcedure> reachableChapelProcedures,
+                                                  boolean isCallable) {
         assert !idMemberTokens.isEmpty();
         var lastToken = idMemberTokens.get(idMemberTokens.size() - 1);
         var res = new ArrayList<SemanticToken>();
