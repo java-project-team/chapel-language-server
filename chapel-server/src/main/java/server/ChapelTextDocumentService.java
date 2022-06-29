@@ -7,10 +7,15 @@ import parser.Parser;
 import parser.ParserConstants;
 import parser.SimpleNode;
 import parser.Token;
+import requests.CompletionProvider;
 import requests.DefinitionProvider;
+import server.completion.patterns.HoverPatterns;
 import server.semantic.tokens.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -25,10 +30,114 @@ import static parser.ParserTreeConstants.JJTCLASSDECLARATIONSTATEMENT;
 public class ChapelTextDocumentService implements TextDocumentService {
     private final Logger LOG;
     private final DefinitionProvider definitionProvider;
+    private CompletionProvider completionProvider;
+
 
     public ChapelTextDocumentService(Logger LOG, DefinitionProvider definitionProvider) {
         this.LOG = LOG;
         this.definitionProvider = definitionProvider;
+    }
+
+    @Override
+    public CompletableFuture<Hover> hover(HoverParams params) {
+        try {
+            MarkupContent res = new MarkupContent();
+
+            List<String> lines = new ArrayList<>();
+            var doc = new File(new URI(params.getTextDocument().getUri()));
+            Scanner readFile = new Scanner(doc);
+            int line = params.getPosition().getLine();
+            int character = params.getPosition().getCharacter();
+            int currentLine = 0;
+            while (readFile.hasNextLine() && currentLine < line) {
+                currentLine++;
+                lines.add(readFile.nextLine());
+            }
+            String cursorLine = "";
+            if (readFile.hasNextLine()) {
+                cursorLine = readFile.nextLine();
+            }
+            lines.add(cursorLine);
+            if (character >= cursorLine.length()) {
+                character = 0;
+            }
+            boolean isComment = false;
+            for (int i = character; i > 0; i--) {
+                if (cursorLine.toCharArray()[i] == '/' && cursorLine.toCharArray()[i - 1] == '/') {
+                    isComment = true;
+                    break;
+                }
+            }
+
+            if (isComment) {
+                res = new MarkupContent("markdown", "Comment section");
+                readFile.close();
+                return CompletableFuture.completedFuture(new Hover(res));
+            }
+
+            var cursorCharArray = cursorLine.toCharArray();
+            StringBuilder actualLine = new StringBuilder();
+
+            StringBuilder cursorWord = new StringBuilder();
+
+            int wordBegin = character - 1;
+            while (wordBegin < cursorCharArray.length && wordBegin > 0 && cursorCharArray[wordBegin - 1] != ' ') {
+                wordBegin--;
+            }
+
+            while (wordBegin >= 0 && wordBegin < cursorCharArray.length && cursorCharArray[wordBegin] != ' ' && cursorCharArray[wordBegin] != ';') {
+                cursorWord.append(cursorCharArray[wordBegin]);
+                wordBegin++;
+            }
+
+            var hoverPattern = new HoverPatterns();
+
+            if (!Objects.equals(hoverPattern.isDataStructure(cursorWord.toString()), "NONE")) {
+                actualLine.append("Data Structure: [").append(cursorWord).append("](");
+                actualLine.append(hoverPattern.isDataStructure(cursorWord.toString()));
+                actualLine.append(")");
+            } else if (!Objects.equals(hoverPattern.isLanguageSupport(cursorWord.toString()), "NONE")) {
+                actualLine.append("Language support: [").append(cursorWord).append("](");
+                actualLine.append(hoverPattern.isLanguageSupport(cursorWord.toString()));
+                actualLine.append(")");
+            } else if (!Objects.equals(hoverPattern.hasDocumentation(cursorWord.toString()), "NONE")) {
+                actualLine.append(cursorWord).append(" [documentation](");
+                actualLine.append(hoverPattern.hasDocumentation(cursorWord.toString()));
+                actualLine.append(")");
+            } else {
+                actualLine.append(cursorWord);
+            }
+
+            boolean isVariable = false;
+            res = new MarkupContent("markdown", actualLine.toString());
+
+            readFile.close();
+            return CompletableFuture.completedFuture(new Hover(res));
+        } catch (URISyntaxException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) throws RuntimeException {
+        LOG.info("completion");
+        var completionProvider = new CompletionProvider();
+        SemanticTokens ans;
+        try {
+            var doc = new File(new URI(params.getTextDocument().getUri()));
+            var rootNode = Parser.parse(doc.getAbsolutePath());
+            assert rootNode != null;
+            ans = findSemanticTokens(rootNode);
+        } catch (Exception ignored) {
+        }
+
+        var res = completionProvider.getCompletion();
+        return CompletableFuture.completedFuture(res);
+    }
+
+    @Override
+    public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem unresolved) {
+        return CompletableFuture.completedFuture(unresolved);
     }
 
     @Override

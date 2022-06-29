@@ -42,6 +42,7 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
         capabilities.setColorProvider(false);
         capabilities.setDeclarationProvider(true);
         capabilities.setDefinitionProvider(true);
+        capabilities.setHoverProvider(false);
         capabilities.setTypeDefinitionProvider(false); // чет не поняла, что это, и для этого даже клавиш нет
 //        capabilities.setHoverProvider(false);
 
@@ -82,6 +83,16 @@ public class ServerImpl implements LanguageServer, LanguageClientAware {
                         LEGEND_TOKENS,
                         List.of()));
         capabilities.setSemanticTokensProvider(semanticTokensProvider);
+
+        var completionProvider = new CompletionOptions();
+        completionProvider.setWorkDoneProgress(false);
+        completionProvider.setResolveProvider(true);
+        capabilities.setCompletionProvider(completionProvider);
+
+        var hoverProvider = new HoverOptions();
+        hoverProvider.setWorkDoneProgress(false);
+        capabilities.setHoverProvider(hoverProvider);
+
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }
