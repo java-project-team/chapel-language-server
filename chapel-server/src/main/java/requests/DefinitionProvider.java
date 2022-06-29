@@ -34,6 +34,7 @@ public class DefinitionProvider {
         } catch (Exception ignore) {
         }
 
+
         try {
             ans = findDeclarationInLocalModule(uri, var, parentModules, modules);
             if (!ans.isEmpty()) {
@@ -58,32 +59,28 @@ public class DefinitionProvider {
             }
         }
 
-        List<SimpleNode> declarations;
-        if (Objects.equals(var.jjtGetFirstToken().next.image, "(")) {
-            declarations = module
-                    .getFunctions()
-                    .stream()
-                    .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image))
-                    .map(DefinitionFunction::getNode)
-                    .toList();
-        } else {
-            declarations = module
-                    .getVariables()
-                    .stream()
-                    .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image))
-                    .map(DefinitionVariable::getNode)
-                    .toList();
-        }
-        SimpleNode ans = null;
+        List<SimpleNode> declarations = new ArrayList<>();
+        declarations.addAll(module
+                .getFunctions()
+                .stream()
+                .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image)
+                        && Objects.equals(a.getIsParentheses(), (Objects.equals(var.jjtGetFirstToken().next.image, "("))))
+                .map(DefinitionFunction::getNode)
+                .toList());
+        declarations.addAll(module
+                .getVariables()
+                .stream()
+                .filter((a) -> Objects.equals(a.getName(), var.jjtGetFirstToken().image))
+                .map(DefinitionVariable::getNode)
+                .toList());
+
+        var answer = new ArrayList<Location>();
         for (var i : declarations) {
-            ans = i;
+            answer.addAll(List.of(new Location(uri, new Range(new Position(i.jjtGetFirstToken().beginLine,
+                    i.jjtGetFirstToken().beginColumn), new Position(i.jjtGetLastToken().endLine,
+                    i.jjtGetLastToken().endColumn)))));
         }
-        if (ans == null) {
-            return new ArrayList<>();
-        }
-        return List.of(new Location(uri, new Range(new Position(ans.jjtGetFirstToken().beginLine,
-                ans.jjtGetFirstToken().beginColumn), new Position(ans.jjtGetLastToken().endLine,
-                ans.jjtGetLastToken().endColumn))));
+        return answer;
     }
 
     public List<Location> findDeclaration(String uri, Position position) {
@@ -140,9 +137,9 @@ public class DefinitionProvider {
         }
 
         if (Objects.equals(vertex.jjtGetFirstToken().next.image, "(")) {
-            return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION, findDeclarationFunctionNode(uri, vertex.jjtGetFirstToken().image), vertex.jjtGetFirstToken().image);
+            return new ReturnFindDeclarationNode(ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION, findDeclarationFunctionNode(uri, vertex.jjtGetFirstToken().image, true), vertex.jjtGetFirstToken().image);
         } else {
-            List<Pair<String, SimpleNode>> ans = new ArrayList<>();
+            List<Pair<String, SimpleNode>> ans = new ArrayList<>(findDeclarationFunctionNode(uri, vertex.jjtGetFirstToken().image, false));
             var res = findDeclarationVariableNode(vertex);
             if (res != null) {
                 ans.add(new Pair<>(uri, res));
@@ -154,15 +151,15 @@ public class DefinitionProvider {
     public List<Location> findDefinition(String uri, Position position) {
         var ans = findDeclarationNode(uri, position);
         if (ans.listDeclaration.isEmpty()) {
-            if (ans.type == ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION) {
-                return findDeclaration(uri, position);
-            }
-            return new ArrayList<>();
+            return findDeclaration(uri, position);
         }
+
+        List<Location> answer = new ArrayList<>(ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+                res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
+                res.getValue().jjtGetLastToken().endColumn)))).toList());
+
         if (ans.type == ReturnFindDeclarationNode.Const.FUNCTION_DECLARATION) {
-            return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
-                    res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
-                    res.getValue().jjtGetLastToken().endColumn)))).toList();
+            return answer;
         }
 
         var vertex = ans.listDeclaration.get(0).getValue();
@@ -172,9 +169,9 @@ public class DefinitionProvider {
                     for (int j = 0; j < vertex.jjtGetChild(i).jjtGetNumChildren(); j++) {
                         for (int k = 0; k < vertex.jjtGetChild(i).jjtGetChild(j).jjtGetNumChildren(); k++) {
                             if (Objects.equals(vertex.jjtGetChild(i).jjtGetChild(j).jjtGetChild(k).toString(), "InitializationPart")) {
-                                return ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
+                                answer.addAll(ans.listDeclaration.stream().map(res -> new Location(res.getKey(), new Range(new Position(res.getValue().jjtGetFirstToken().beginLine,
                                         res.getValue().jjtGetFirstToken().beginColumn), new Position(res.getValue().jjtGetLastToken().endLine,
-                                        res.getValue().jjtGetLastToken().endColumn)))).toList();
+                                        res.getValue().jjtGetLastToken().endColumn)))).toList());
                             }
                         }
                     }
@@ -183,8 +180,11 @@ public class DefinitionProvider {
         }
 
         var res = dfs((SimpleNode) vertex.jjtGetParent().jjtGetParent(), vertex, ans.name);
-        if (res == null) {
-            return new ArrayList<>();
+        if (res == null || !answer.isEmpty()) {
+            if (answer.isEmpty()) {
+                return findDeclaration(uri, position);
+            }
+            return answer;
         }
         return List.of(new Location(uri, new Range(new Position(res.jjtGetFirstToken().beginLine,
                 res.jjtGetFirstToken().beginColumn), new Position(res.jjtGetLastToken().endLine,
@@ -234,30 +234,17 @@ public class DefinitionProvider {
         return false;
     }
 
-    private static List<Pair<String, SimpleNode>> findDeclarationFunctionNode(String file, String function) {
+    private static List<Pair<String, SimpleNode>> findDeclarationFunctionNode(String file, String function, boolean isParentheses) {
         List<Pair<String, SimpleNode>> ans = new ArrayList<>();
         {
             List<DefinitionFunction> functions = filesInformation.getFileInformation(file).getFunctions();
             for (DefinitionFunction i : functions) {
-                if (Objects.equals(i.getName(), function)) {
+                if (Objects.equals(i.getName(), function) && i.getIsParentheses() == isParentheses) {
                     ans.add(new Pair<>(file, i.getNode()));
                 }
             }
-            if (!ans.isEmpty()) {
-                return ans;
-            }
+            return ans;
         }
-
-        Set<String> namesFiles = filesInformation.getNamesFiles();
-        for (String name : namesFiles) {
-            List<DefinitionFunction> functions = filesInformation.getFileInformation(name).getFunctions();
-            for (DefinitionFunction i : functions) {
-                if (Objects.equals(i.getName(), function)) {
-                    ans.add(new Pair<>(name, i.getNode()));
-                }
-            }
-        }
-        return ans;
     }
 
     private static SimpleNode findDeclarationVariableNode(SimpleNode vertex) {

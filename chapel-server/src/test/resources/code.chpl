@@ -10,8 +10,12 @@ module Main {
         var y = 43;
         Main.x = 5;
         proc foo() {}
+
+        proc vvv {}
+        vvv; 
     }
 
+    Zun.vvv;
     module Zzz {
         use Zun;
         var y = 43;
