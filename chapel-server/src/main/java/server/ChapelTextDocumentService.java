@@ -54,7 +54,7 @@ public class ChapelTextDocumentService implements TextDocumentService {
                 lines.add(readFile.nextLine());
             }
             String cursorLine = "";
-            if(readFile.hasNextLine()) {
+            if (readFile.hasNextLine()) {
                 cursorLine = readFile.nextLine();
             }
             lines.add(cursorLine);
@@ -109,10 +109,6 @@ public class ChapelTextDocumentService implements TextDocumentService {
             }
 
             boolean isVariable = false;
-
-
-
-
             res = new MarkupContent("markdown", actualLine.toString());
 
             readFile.close();
@@ -132,7 +128,9 @@ public class ChapelTextDocumentService implements TextDocumentService {
             var rootNode = Parser.parse(doc.getAbsolutePath());
             assert rootNode != null;
             ans = findSemanticTokens(rootNode);
-        } catch (Exception ignored){}
+        } catch (Exception ignored) {
+        }
+
         var res = completionProvider.getCompletion();
         return CompletableFuture.completedFuture(res);
     }
